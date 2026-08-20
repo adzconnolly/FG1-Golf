@@ -343,7 +343,32 @@ window.FG={
      save();render();
    }
  },
- editP(i){const n=prompt("Player name",S.players[i].name);if(n===null)return;const h=prompt("Playing Handicap",S.players[i].hcp);if(h===null)return;S.players[i]={name:n||"Player",hcp:Math.max(0,+h||0)};save();render()},
+ editP(i){
+   const p=S.players[i];
+   app.innerHTML=top("Edit Player")+`<div class="screen">
+   <div class="card">
+     <label>Player name</label>
+     <input id="editPlayerName" type="text" value="${p.name}" autocomplete="off">
+     <label>Playing Handicap</label>
+     <input id="editPlayerHcp" type="number" min="0" max="54" step="1" value="${p.hcp}" inputmode="numeric">
+     <div class="tiny muted" style="margin-top:8px">This handicap is used to calculate Stableford strokes by Stroke Index.</div>
+   </div>
+   <button class="btn primary full" onclick="FG.savePlayerEdit(${i})">SAVE PLAYER</button>
+   <div style="height:8px"></div>
+   <button class="btn outline full" onclick="FG.go('players')">CANCEL</button>
+   </div>`;
+ },
+ savePlayerEdit(i){
+   const name=document.getElementById("editPlayerName").value.trim()||"Player";
+   let hcp=Number(document.getElementById("editPlayerHcp").value);
+   if(!Number.isFinite(hcp)) hcp=0;
+   hcp=Math.max(0,Math.min(54,hcp));
+   S.players[i].name=name;
+   S.players[i].hcp=hcp;
+   save();
+   S.view="players";
+   render();
+ },
  start(){
    if(S.started) saveActiveRound("in_progress");
    S.activeRoundId="r"+Date.now();
