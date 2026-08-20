@@ -218,17 +218,7 @@ function home(){
 <div style="height:8px"></div>
 <button class="btn outline full rulesBtn" onclick="FG.showRules()">RULES</button></div>
   <div class="card"><div class="row"><div><b>Recent rounds</b><div class="muted tiny">Latest 6 shown here. Full history is available in My Rounds.</div></div><button class="btn outline" onclick="FG.go('myRounds')">MY ROUNDS</button></div></div>
-  <div class="card">
-  <div class="row">
-    <div><b>Round backup</b><div class="tiny muted">Protect your history or move it to another device.</div></div>
-  </div>
-  <div class="grid g2" style="margin-top:10px">
-    <button class="btn outline" onclick="FG.exportBackup()">EXPORT BACKUP</button>
-    <button class="btn outline" onclick="document.getElementById('backupImportHome').click()">IMPORT BACKUP</button>
-  </div>
-  <input id="backupImportHome" type="file" accept="application/json,.json" style="display:none" onchange="FG.importBackup(this)">
-</div>
-${recent.length?recent.map(r=>{
+  ${recent.length?recent.map(r=>{
     const label=r.status==="completed"?"Completed":"In progress";
     const player=(r.players&&r.players[0])?r.players[0].name:"Player";
     const date=new Date(r.updatedAt||Date.now()).toLocaleDateString();
