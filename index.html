@@ -38,11 +38,23 @@ demo:{name:"FG1 Demo Golf Club",tee:"Demo",holes:[
 [1,4,7],[2,4,13],[3,3,17],[4,5,5],[5,4,1],[6,5,9],[7,4,11],[8,3,15],[9,4,3],
 [10,4,8],[11,4,14],[12,5,4],[13,3,18],[14,4,2],[15,5,10],[16,4,12],[17,3,16],[18,4,6]
 ]},
+maidenheadWhite:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"White",holes:[
+[1,5,18],[2,4,6],[3,3,8],[4,4,2],[5,5,10],[6,4,14],[7,4,16],[8,3,12],[9,4,4],
+[10,5,3],[11,3,15],[12,4,7],[13,4,9],[14,4,1],[15,3,17],[16,4,11],[17,4,5],[18,5,13]
+]},
 maidenheadYellow:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"Yellow",holes:[
-[1,5,13],[2,4,1],[3,3,11],[4,4,5],[5,5,3],[6,4,15],[7,4,9],[8,3,17],[9,4,7],
-[10,5,6],[11,3,8],[12,4,12],[13,4,10],[14,4,2],[15,3,18],[16,4,16],[17,4,4],[18,5,14]
+[1,5,18],[2,4,6],[3,3,8],[4,4,2],[5,5,10],[6,4,14],[7,4,16],[8,3,12],[9,4,4],
+[10,5,3],[11,3,15],[12,4,7],[13,4,9],[14,4,1],[15,3,17],[16,4,11],[17,4,5],[18,5,13]
+]},
+maidenheadBlue:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"Blue",holes:[
+[1,5,18],[2,4,6],[3,3,8],[4,4,2],[5,5,10],[6,4,14],[7,4,16],[8,3,12],[9,4,4],
+[10,5,3],[11,3,15],[12,4,7],[13,4,9],[14,4,1],[15,3,17],[16,4,11],[17,4,5],[18,5,13]
+]},
+maidenheadRed:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"Red",holes:[
+[1,5,6],[2,4,8],[3,3,12],[4,4,2],[5,5,10],[6,4,14],[7,4,16],[8,3,18],[9,4,4],
+[10,5,5],[11,3,9],[12,4,11],[13,4,13],[14,4,1],[15,3,17],[16,4,3],[17,5,15],[18,5,7]
 ]}
-};
+}
 function makeCourse(p){return p.holes.map(x=>({h:x[0],par:x[1],si:x[2]}))}
 let COURSE=makeCourse(PRESETS.demo);
 const fresh=()=>({view:"home",courseName:"FG1 Demo Golf Club",tee:"Demo",preset:"demo",players:[{name:"Player 1",hcp:18}],hole:1,pi:0,scores:{},started:false,activeRoundId:null,rounds:[]});
@@ -162,10 +174,16 @@ function setup(){app.innerHTML=top("Start a Round")+`<div class="screen">
 <label>Course</label>
 <select onchange="FG.preset(this.value)">
 <option value="demo" ${S.preset==="demo"?"selected":""}>FG1 Demo Golf Club</option>
-<option value="maidenheadYellow" ${S.preset==="maidenheadYellow"?"selected":""}>Maidenhead Golf Club – Mill Ride, Ascot (Yellow)</option>
+<optgroup label="Maidenhead Golf Club – Mill Ride, Ascot">
+<option value="maidenheadWhite" ${S.preset==="maidenheadWhite"?"selected":""}>⚪ White Tees · Men · Par 72</option>
+<option value="maidenheadYellow" ${S.preset==="maidenheadYellow"?"selected":""}>🟡 Yellow Tees · Men · Par 72</option>
+<option value="maidenheadBlue" ${S.preset==="maidenheadBlue"?"selected":""}>🔵 Blue Tees · Men · Par 72</option>
+<option value="maidenheadRed" ${S.preset==="maidenheadRed"?"selected":""}>🔴 Red Tees · Women · Par 73</option>
+</optgroup>
 <option value="custom" ${S.preset==="custom"?"selected":""}>Imported / Custom Course</option>
 </select>
 <div class="tiny muted" style="margin-top:8px">${S.courseName}${S.tee?` · ${S.tee} tees`:""}</div>
+${S.preset&&S.preset.startsWith("maidenhead")?`<div class="notice" style="margin-top:10px">Par and Stroke Index are loaded from the Maidenhead Golf Club scorecard for the selected tee set. White, Yellow and Blue use the Men's Par/S.I.; Red uses the Women's Par/S.I.</div>`:""}
 
 <div class="label">Import a scorecard</div>
 <input id="scorecardPhoto" type="file" accept="image/*" capture="environment" onchange="FG.readScorecard(this)" style="padding:10px">
