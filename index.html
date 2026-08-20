@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0d5f2a"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="FG1"/>
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <title>FG1 Golf</title>
+  <style>
+    :root{
+      --green:#12652f;--green2:#1e8a3e;--bg:#f5f7f5;--card:#fff;--text:#122016;
+      --muted:#6b756d;--line:#dbe2dc;--danger:#a72c2c;--shadow:0 6px 24px rgba(12,50,26,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select{font:inherit}
+    .app{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:88px}
+    .topbar{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#0b5b28,#126b31);color:#fff;padding:18px 18px 14px;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+    .topbar h1{margin:0;font-size:21px;text-align:center}
+    .topbar .sub{margin-top:4px;text-align:center;font-size:13px;opacity:.9}
+    .screen{padding:18px}
+    .hero{background:linear-gradient(180deg,#0f5d2a,#164b29);color:#fff;border-radius:26px;padding:30px 22px;margin-top:12px;box-shadow:var(--shadow);text-align:center}
+    .logo{font-weight:900;font-style:italic;font-size:72px;letter-spacing:-5px}
+    .logo span{color:#78c843}
+    .tag{font-size:17px;line-height:1.45;margin:6px 0 22px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}.wrap{flex-wrap:wrap}
+    .btn{border:0;border-radius:14px;padding:15px 16px;background:#eef2ee;font-weight:750;color:var(--text);min-height:52px;cursor:pointer}
+    .btn.primary{background:var(--green);color:#fff}.btn.outline{background:#fff;border:1.5px solid var(--green);color:var(--green)}
+    .btn.small{min-height:40px;padding:9px 12px;border-radius:10px;font-size:14px}.btn.active{background:var(--green2);color:#fff}
+    .btn.danger{background:#fff3f3;color:var(--danger);border:1px solid #efcaca}
+    .full{width:100%}.grid{display:grid;gap:10px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g6{grid-template-columns:repeat(6,1fr)}
+    label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+    input,select{width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px}
+    h2{font-size:24px;margin:8px 0 16px}h3{margin:3px 0 12px;font-size:16px}
+    .muted{color:var(--muted)}.tiny{font-size:12px}.center{text-align:center}
+    .metric{background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px;text-align:center}
+    .metric b{font-size:28px;display:block;color:var(--green)}.metric.heroMetric{background:var(--green);color:white}.metric.heroMetric b{color:white;font-size:36px}
+    .sectionLabel{font-size:12px;font-weight:850;color:#304637;margin:15px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+    .scoreBtns .btn{padding:14px 4px;font-size:18px}
+    .playerTabs{display:flex;gap:7px;overflow:auto;padding-bottom:3px}.playerTab{white-space:nowrap;min-width:86px}
+    table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+    th,td{padding:10px 6px;border-bottom:1px solid var(--line);text-align:center}th{text-transform:uppercase;font-size:10px;color:var(--muted)}
+    td.name,th.name{text-align:left;font-weight:700}.totalCell{font-weight:900;color:var(--green);font-size:16px}
+    .bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:0;max-width:640px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:10}
+    .nav{background:none;border:0;padding:7px 4px;font-size:11px;color:#526056}.nav b{display:block;font-size:20px;margin-bottom:2px}.nav.active{color:var(--green);font-weight:800}
+    .pill{padding:5px 9px;background:#eef5ef;color:var(--green);border-radius:999px;font-size:12px;font-weight:800}
+    .notice{background:#fff8df;border:1px solid #ecd58e;border-radius:12px;padding:10px 12px;font-size:13px}
+    .hidden{display:none!important}
+    .leaderFirst{padding:18px;background:#fff;border-radius:18px;border:1px solid var(--line);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+    .leaderFirst .big{font-size:34px;font-weight:900;color:var(--green)}
+    @media(max-width:390px){.screen{padding:13px}.g6{gap:6px}.scoreBtns .btn{font-size:16px;padding:13px 2px}.metric b{font-size:24px}}
+  </style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script>
+const defaultCourse = [
+ {h:1,p:4,si:7,y:401},{h:2,p:4,si:13,y:365},{h:3,p:3,si:17,y:171},{h:4,p:5,si:5,y:526},
+ {h:5,p:4,si:1,y:435},{h:6,p:5,si:9,y:538},{h:7,p:4,si:11,y:389},{h:8,p:3,si:15,y:162},
+ {h:9,p:4,si:3,y:427},{h:10,p:4,si:8,y:404},{h:11,p:4,si:14,y:370},{h:12,p:5,si:4,y:545},
+ {h:13,p:3,si:18,y:155},{h:14,p:4,si:2,y:442},{h:15,p:5,si:10,y:521},{h:16,p:4,si:12,y:381},
+ {h:17,p:3,si:16,y:176},{h:18,p:4,si:6,y:414}
+];
+
+const blankState = () => ({
+ screen:'home', courseName:'FG1 Demo Golf Club', tee:'White', course:defaultCourse,
+ players:[{name:'Player 1', handicap:18}], hole:1, activePlayer:0, rounds:[],
+ scores:{}, roundStarted:false
+});
+let S;
+try{S=JSON.parse(localStorage.getItem('fg1_state'))||blankState()}catch(e){S=blankState()}
+if(S && S.scores){
+  Object.values(S.scores).forEach(r=>{
+    if(r && r.lostBalls==null){
+      r.lostBalls = r.lostBall===true ? 1 : 0;
+    }
+  });
+}
+function save(){localStorage.setItem('fg1_state',JSON.stringify(S))}
+function key(pi,h){return `${pi}-${h}`}
+function rec(pi,h){return S.scores[key(pi,h)]||{gross:null,fairway:null,green:null,putts:null,lostBalls:0}}
+function strokesOnHole(ph,si){
+  ph=Math.max(0,Number(ph)||0);
+  return Math.floor(ph/18) + (si <= (ph%18) ? 1 : 0);
+}
+function stableford(gross,par,strokes){
+  if(gross==null) return 0;
+  let net=gross-strokes, diff=net-par;
+  return Math.max(0,2-diff);
+}
+function fg1(r,par){
+  let pts=0;
+  if(par!==3 && r.fairway==='hit') pts+=1;
+  if(r.green==='gir') pts+=1;
+  if(par===5 && r.green==='in2') pts+=2;
+  if(Number(r.putts)===1) pts+=1;
+  if(Number(r.putts)>=3) pts-=1;
+  pts -= (Number(r.lostBalls)||0);
+  return pts;
+}
+function holeCalc(pi,h){
+  const hole=S.course[h-1], r=rec(pi,h), st=strokesOnHole(S.players[pi].handicap,hole.si);
+  const sb=stableford(r.gross,hole.p,st), f=fg1(r,hole.p);
+  return {r,hole,st,sb,f,total:sb+f}
+}
+function totals(pi, upto=18){
+  let gross=0,sb=0,f=0,played=0,fwHit=0,fwOpp=0,gir=0,in2=0,one=0,three=0,putts=0;
+  for(let h=1;h<=Math.min(upto,S.course.length);h++){
+    const c=holeCalc(pi,h); if(c.r.gross!=null){played++;gross+=Number(c.r.gross);sb+=c.sb;f+=c.f;}
+    if(c.hole.p!==3 && c.r.fairway){fwOpp++; if(c.r.fairway==='hit')fwHit++}
+    if(c.r.green==='gir'){gir++} if(c.r.green==='in2'){gir++;in2++}
+    if(c.r.putts!=null){putts+=Number(c.r.putts);if(Number(c.r.putts)===1)one++;if(Number(c.r.putts)>=3)three++}
+  }
+  return {gross,sb,f,total:sb+f,played,fwHit,fwOpp,gir,in2,one,three,putts}
+}
+function el(s){document.getElementById('app').innerHTML=s}
+function top(title,sub=''){return `<div class="topbar"><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div>`}
+function bottom(active='score'){return `<div class="bottom">
+ <button class="nav ${active==='score'?'active':''}" onclick="go('play')"><b>⚑</b>Score</button>
+ <button class="nav ${active==='leader'?'active':''}" onclick="go('leader')"><b>🏆</b>Leaderboard</button>
+ <button class="nav ${active==='card'?'active':''}" onclick="go('card')"><b>▦</b>Scorecard</button>
+ <button class="nav" onclick="go('home')"><b>•••</b>Home</button></div>`}
+function go(s){S.screen=s;save();render()}
+function home(){
+ el(`<div class="screen"><div class="hero"><div class="logo">FG<span>1</span></div><div>Fairways · Greens · 1 Putts</div>
+ <div class="tag">Every fairway.<br>Every green.<br>Every putt matters.</div>
+ <button class="btn primary full" onclick="go('setup')">PLAY FG1</button></div>
+ <div style="height:14px"></div>
+ <button class="btn full" onclick="go('history')">My Rounds</button><div style="height:8px"></div>
+ <button class="btn full" onclick="go('leader')">Leaderboard</button><div style="height:8px"></div>
+ <button class="btn full" onclick="go('stats')">My Stats</button></div>`);
+}
+function setup(){
+ el(top('Start a Round')+`<div class="screen">
+ <div class="card"><label>Course</label><input id="courseName" value="${S.courseName}" oninput="S.courseName=this.value;save()">
+ <div style="height:12px"></div><label>Tees</label><input id="tee" value="${S.tee}" oninput="S.tee=this.value;save()"></div>
+ <div class="card"><h3>Course setup</h3><div class="muted tiny">Demo 18-hole course loaded. You can edit par and Stroke Index below.</div>
+ <div style="height:10px"></div><button class="btn outline full" onclick="go('course')">EDIT 18 HOLES</button></div>
+ <button class="btn primary full" onclick="go('players')">NEXT — PLAYERS</button></div>`);
+}
+function course(){
+ let rows=S.course.map((x,i)=>`<tr><td>${x.h}</td><td><input style="padding:7px;text-align:center" type="number" min="3" max="5" value="${x.p}" onchange="S.course[${i}].p=+this.value;save()"></td>
+ <td><input style="padding:7px;text-align:center" type="number" min="1" max="18" value="${x.si}" onchange="S.course[${i}].si=+this.value;save()"></td></tr>`).join('');
+ el(top('Course Setup',S.courseName)+`<div class="screen"><div class="card"><table><thead><tr><th>Hole</th><th>Par</th><th>SI</th></tr></thead><tbody>${rows}</tbody></table></div>
+ <button class="btn primary full" onclick="go('players')">SAVE & CONTINUE</button></div>`);
+}
+function players(){
+ let p=S.players.map((x,i)=>`<div class="card row between"><div><b>${x.name}</b><div class="muted tiny">Playing Handicap: ${x.handicap}</div></div>
+ <button class="btn small outline" onclick="editPlayer(${i})">EDIT</button></div>`).join('');
+ el(top("Who's Playing?")+`<div class="screen">${p}
+ ${S.players.length<4?`<button class="btn outline full" onclick="addPlayer()">+ ADD PLAYER</button><div style="height:12px"></div>`:''}
+ <button class="btn primary full" onclick="startRound()">START ROUND</button></div>`);
+}
+function addPlayer(){S.players.push({name:`Player ${S.players.length+1}`,handicap:18});save();players()}
+function editPlayer(i){
+ const p=S.players[i]; el(top('Edit Player')+`<div class="screen"><div class="card"><label>Name</label><input id="pn" value="${p.name}">
+ <div style="height:12px"></div><label>Playing Handicap</label><input id="ph" type="number" min="0" max="54" value="${p.handicap}">
+ </div><button class="btn primary full" onclick="S.players[${i}].name=document.getElementById('pn').value||'Player';S.players[${i}].handicap=+document.getElementById('ph').value||0;save();go('players')">SAVE PLAYER</button>
+ ${S.players.length>1?`<div style="height:10px"></div><button class="btn danger full" onclick="S.players.splice(${i},1);save();go('players')">REMOVE PLAYER</button>`:''}</div>`);
+}
+function startRound(){S.scores={};S.hole=1;S.activePlayer=0;S.roundStarted=true;save();go('play')}
+function selectVal(pi,h,field,val){
+ let r=rec(pi,h); r[field]=val; S.scores[key(pi,h)]=r; save(); render();
+}
+function play(){
+ if(!S.roundStarted){go('setup');return}
+ const h=S.hole, pi=S.activePlayer, c=holeCalc(pi,h), r=c.r, hole=c.hole;
+ const scoreOpts = hole.p===3?[2,3,4,5,6]:hole.p===4?[3,4,5,6,7,8]:[3,4,5,6,7,8];
+ const scores=scoreOpts.map(v=>`<button class="btn ${r.gross==v?'active':''}" onclick="selectVal(${pi},${h},'gross',${v})">${v}${v===8?' +':''}</button>`).join('');
+ let fw=hole.p===3?'':`<div class="sectionLabel">Fairway</div><div class="grid g2">
+ <button class="btn ${r.fairway==='hit'?'active':''}" onclick="selectVal(${pi},${h},'fairway','hit')">✓ HIT +1</button>
+ <button class="btn ${r.fairway==='miss'?'active':''}" onclick="selectVal(${pi},${h},'fairway','miss')">✕ MISS</button></div>`;
+ let gr=hole.p===5?`<div class="grid g3"><button class="btn ${r.green==='in2'?'active':''}" onclick="selectVal(${pi},${h},'green','in2')">★ IN 2 +2</button>
+ <button class="btn ${r.green==='gir'?'active':''}" onclick="selectVal(${pi},${h},'green','gir')">✓ GIR +1</button>
+ <button class="btn ${r.green==='miss'?'active':''}" onclick="selectVal(${pi},${h},'green','miss')">✕ MISS</button></div>`:
+ `<div class="grid g2"><button class="btn ${r.green==='gir'?'active':''}" onclick="selectVal(${pi},${h},'green','gir')">✓ GIR +1</button>
+ <button class="btn ${r.green==='miss'?'active':''}" onclick="selectVal(${pi},${h},'green','miss')">✕ MISS</button></div>`;
+ const tabs=S.players.map((p,i)=>`<button class="btn small playerTab ${i===pi?'active':''}" onclick="S.activePlayer=${i};save();render()">${p.name}</button>`).join('');
+ const complete = r.gross!=null && r.green && r.putts!=null && (hole.p===3 || r.fairway);
+ const t=totals(pi,h);
+ el(top(`HOLE ${h} OF 18`,`PAR ${hole.p} · SI ${hole.si} · ${hole.y||''} YDS · ${c.st} stroke${c.st===1?'':'s'}`)+`<div class="screen">
+ <div class="playerTabs">${tabs}</div>
+ <div class="sectionLabel">Score</div><div class="grid g6 scoreBtns">${scores}</div>
+ ${fw}
+ <div class="sectionLabel">Green</div>${gr}
+ <div class="sectionLabel">Putts</div><div class="grid g4">
+ ${[1,2,3,4].map(v=>`<button class="btn ${Number(r.putts)===v?'active':''}" onclick="selectVal(${pi},${h},'putts',${v})">${v}${v===4?' +':''}</button>`).join('')}</div>
+
+ <div class="sectionLabel">Lost Balls</div><div class="grid g4">
+ ${[0,1,2,3].map(v=>`<button class="btn ${Number(r.lostBalls||0)===v?'active':''}" onclick="selectVal(${pi},${h},'lostBalls',${v})">${v}${v===3?' +':''}${v>0?' (−'+v+')':''}</button>`).join('')}</div>
+
+ <div style="height:15px"></div><div class="grid g4">
+ <div class="metric"><span>Gross</span><b>${r.gross??'–'}</b></div>
+ <div class="metric"><span>Stbf</span><b>${r.gross!=null?c.sb:'–'}</b></div>
+ <div class="metric"><span>FG1</span><b>${complete?c.f:'–'}</b></div>
+ <div class="metric heroMetric"><span>Total</span><b>${complete?c.total:'–'}</b></div></div>
+ <div class="card center" style="margin-top:14px"><span class="pill">${S.players[pi].name}: ${t.sb} Stableford + ${t.f} FG1 = ${t.total} Total</span></div>
+ ${complete?`<button class="btn primary full" onclick="nextEntry()">${pi<S.players.length-1?'NEXT PLAYER →':h<18?'COMPLETE HOLE →':'FINISH ROUND'}</button>`:`<div class="notice">Enter score, ${hole.p===3?'':'fairway, '}green and putts to complete this player.</div>`}
+ </div>${bottom('score')}`);
+}
+function nextEntry(){
+ if(S.activePlayer < S.players.length-1){S.activePlayer++;save();render();return}
+ if(S.hole<18){S.hole++;S.activePlayer=0;save();render();return}
+ finishRound()
+}
+function finishRound(){
+ const date=new Date().toISOString();
+ const snapshot={date,courseName:S.courseName,tee:S.tee,players:JSON.parse(JSON.stringify(S.players)),course:JSON.parse(JSON.stringify(S.course)),scores:JSON.parse(JSON.stringify(S.scores))};
+ S.rounds.unshift(snapshot);S.rounds=S.rounds.slice(0,25);save();go('results')
+}
+function leaderboard(){
+ let arr=S.players.map((p,i)=>({i,p,t:totals(i,S.roundStarted?S.hole:18)})).sort((a,b)=>b.t.total-a.t.total);
+ let rows=arr.map((x,idx)=>`<tr><td>${idx+1}</td><td class="name">${x.p.name}</td><td>${x.t.sb}</td><td>${x.t.f}</td><td class="totalCell">${x.t.total}</td></tr>`).join('');
+ const first=arr[0];
+ el(top('FG1 LIVE',S.roundStarted?`AFTER HOLE ${S.hole}`:'CURRENT ROUND')+`<div class="screen">
+ ${first?`<div class="leaderFirst"><div><b>${first.p.name}</b><div class="muted">${first.t.sb} Stableford + ${first.t.f} FG1</div></div><div class="big">${first.t.total}</div></div>`:''}
+ <div class="card"><table><thead><tr><th>Pos</th><th class="name">Player</th><th>Stbf</th><th>FG1</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div>${bottom('leader')}`);
+}
+function scorecard(){
+ const pi=S.activePlayer||0; let rows='';
+ for(let h=1;h<=18;h++){const c=holeCalc(pi,h);rows+=`<tr onclick="S.hole=${h};S.activePlayer=${pi};save();go('play')"><td>${h}</td><td>${c.hole.p}</td><td>${c.r.gross??'–'}</td><td>${c.r.gross!=null?c.sb:'–'}</td><td>${c.hole.p===3?'–':c.r.fairway==='hit'?'✓':c.r.fairway==='miss'?'×':'–'}</td><td>${c.r.green==='in2'?'★':c.r.green==='gir'?'✓':c.r.green==='miss'?'×':'–'}</td><td>${c.r.putts??'–'}</td><td>${Number(c.r.lostBalls||0)>0?'−'+Number(c.r.lostBalls):'–'}</td><td>${c.r.gross!=null?c.f:'–'}</td><td class="totalCell">${c.r.gross!=null?c.total:'–'}</td></tr>`}
+ const opts=S.players.map((p,i)=>`<option value="${i}" ${i===pi?'selected':''}>${p.name}</option>`).join('');
+ el(top('Scorecard')+`<div class="screen"><div class="card"><select onchange="S.activePlayer=+this.value;save();render()">${opts}</select><div style="height:10px"></div>
+ <div style="overflow:auto"><table><thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>LB</th><th>FG1</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>${bottom('card')}`);
+}
+function results(){
+ let cards=S.players.map((p,i)=>{let t=totals(i,18);return `<div class="card"><h2 style="margin-top:0">${p.name}</h2>
+ <div class="grid g4"><div class="metric"><span>Gross</span><b>${t.gross}</b></div><div class="metric"><span>Stbf</span><b>${t.sb}</b></div><div class="metric"><span>FG1</span><b>${t.f}</b></div><div class="metric heroMetric"><span>Total</span><b>${t.total}</b></div></div>
+ <div style="height:12px"></div><div class="grid g3"><div class="metric"><span>Fairways</span><b>${t.fwHit}/${t.fwOpp}</b></div><div class="metric"><span>GIR</span><b>${t.gir}/18</b></div><div class="metric"><span>Putts</span><b>${t.putts}</b></div></div>
+ <p class="center muted">${t.sb} + ${t.f} = <b>${t.total}</b></p></div>`}).join('');
+ el(top('ROUND COMPLETE',S.courseName)+`<div class="screen">${cards}<button class="btn primary full" onclick="go('leader')">FINAL LEADERBOARD</button>
+ <div style="height:10px"></div><button class="btn outline full" onclick="S.roundStarted=false;save();go('home')">DONE</button></div>`);
+}
+function history(){
+ let items=S.rounds.length?S.rounds.map(r=>`<div class="card"><b>${r.courseName}</b><div class="muted tiny">${new Date(r.date).toLocaleDateString()} · ${r.tee} tees</div></div>`).join(''):`<div class="card center muted">No completed rounds yet.</div>`;
+ el(top('My Rounds')+`<div class="screen">${items}<button class="btn outline full" onclick="go('home')">BACK HOME</button></div>`)
+}
+function stats(){
+ const t=totals(0,18);
+ el(top('My FG1')+`<div class="screen"><div class="card center"><div class="muted">Current Round Total</div><div style="font-size:56px;font-weight:900;color:var(--green)">${t.total}</div><b>${t.sb} Stableford + ${t.f} FG1</b></div>
+ <div class="grid g2"><div class="metric"><span>Fairways</span><b>${t.fwOpp?Math.round(100*t.fwHit/t.fwOpp):0}%</b></div><div class="metric"><span>GIR</span><b>${Math.round(100*t.gir/18)}%</b></div><div class="metric"><span>1 Putts</span><b>${t.one}</b></div><div class="metric"><span>3+ Putts</span><b>${t.three}</b></div></div>
+ <div style="height:14px"></div><button class="btn outline full" onclick="go('home')">BACK HOME</button></div>`)
+}
+function render(){
+ const f={home,setup,course,players,play,leader:leaderboard,card:scorecard,results,history,stats};
+ (f[S.screen]||home)();
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault()});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
+render();
+</script>
+</body>
+</html>
