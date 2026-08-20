@@ -18,7 +18,7 @@
 .logo{font-size:74px;font-weight:900;font-style:italic;letter-spacing:-6px}.logo span{color:#78c844}.tag{font-size:18px;line-height:1.45;margin:10px 0 24px}
 .card{background:white;border:1px solid var(--line);border-radius:18px;padding:15px;margin:0 0 13px;box-shadow:0 5px 20px rgba(20,55,30,.06)}
 .btn{border:0;border-radius:14px;background:#edf2ee;color:var(--ink);padding:14px 12px;min-height:50px;font-weight:800}.btn.primary{background:var(--g);color:white}.btn.outline{background:white;border:1.5px solid var(--g);color:var(--g)}.btn.active{background:var(--g2);color:white}.btn.danger{background:#fff1f1;color:var(--red)}.full{width:100%}
-.grid{display:grid;gap:8px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g6{grid-template-columns:repeat(6,1fr)}
+.grid{display:grid;gap:8px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}.g6{grid-template-columns:repeat(6,1fr)}
 label,.label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:850;color:#33483a;display:block;margin:14px 0 7px}
 input,select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;background:white;font-size:16px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:var(--muted)}.tiny{font-size:12px}
@@ -28,7 +28,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;background:white;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 8px calc(7px + env(safe-area-inset-bottom));z-index:7}.nav{border:0;background:none;padding:6px 2px;font-size:11px;color:#536057}.nav b{display:block;font-size:19px}.nav.on{color:var(--g);font-weight:800}
 .notice{padding:10px 12px;border-radius:12px;background:#fff8df;border:1px solid #edd994;font-size:13px}
 h2{margin:5px 0 15px}.bigTotal{font-size:56px;font-weight:900;color:var(--g);text-align:center}
-@media(max-width:430px){.heroImage{height:210px}}
+@media(max-width:430px){.heroImage{height:210px}.g5{grid-template-columns:repeat(2,1fr)}.g5 .metric:last-child{grid-column:span 2}}
 </style>
 </head>
 <body><div id="app"></div>
@@ -227,13 +227,14 @@ const a=S.players.map((p,i)=>({p,t:totals(i,S.hole)})).sort((x,y)=>y.t.total-x.t
 app.innerHTML=top("FG1 LIVE",`Through hole ${S.hole}`)+`<div class="screen">
 ${a.map((x,i)=>`<div class="card">
 <div class="row"><div><b>${i+1}. ${x.p.name}</b><div class="tiny muted">${x.t.s} Stableford + ${x.t.f} FG1</div></div><div style="font-size:30px;font-weight:900;color:var(--g)">${x.t.total}</div></div>
-<div class="grid g4" style="margin-top:12px">
+<div class="grid g5" style="margin-top:12px">
 <div class="metric"><span>Fairways</span><b>${x.t.fairPts}</b></div>
 <div class="metric"><span>Greens</span><b>${x.t.greenPts}</b></div>
-<div class="metric"><span>Putting</span><b>${x.t.puttPts}</b></div>
+<div class="metric"><span>1 Putts</span><b>${x.t.one}</b></div>
+<div class="metric"><span>3+ Putts</span><b>${x.t.three}</b></div>
 <div class="metric"><span>Lost</span><b>${x.t.lostPts}</b></div>
 </div>
-<div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · P ${x.t.puttPts} · Lost ${x.t.lostPts}</div>
+<div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · 1P ${x.t.one} · 3+P ${x.t.three} · Lost ${x.t.lostPts}</div>
 </div>`).join("")}
 </div>${nav("leader")}`}
 function card(){
@@ -266,10 +267,11 @@ function card(){
         <div class="metric"><span>Gross</span><b>${t.gross||"–"}</b></div>
         <div class="metric total"><span>Total</span><b>${t.total}</b></div>
       </div>
-      <div class="grid g4" style="margin-top:8px">
+      <div class="grid g5" style="margin-top:8px">
         <div class="metric"><span>Fairways</span><b>${t.fairPts}</b></div>
         <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
-        <div class="metric"><span>Putting</span><b>${t.puttPts}</b></div>
+        <div class="metric"><span>1 Putts</span><b>${t.one}</b></div>
+        <div class="metric"><span>3+ Putts</span><b>${t.three}</b></div>
         <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
       </div>
       <div class="tiny muted" style="margin:10px 0">Tap any hole to edit that player’s score.</div>
@@ -302,18 +304,18 @@ function savedRoundContext(round){
     return {hole,r,sh,s,f,total:s+f};
   }
   function rt(pi){
-    let gross=0,s=0,f=0,fairPts=0,greenPts=0,puttPts=0,lostPts=0;
+    let gross=0,s=0,f=0,fairPts=0,greenPts=0,puttPts=0,lostPts=0,one=0,three=0;
     for(let h=1;h<=18;h++){
       const c=rc(pi,h),r=c.r;
       if(r.gross!=null){gross+=+r.gross;s+=c.s;f+=c.f}
       if(c.hole.par!==3&&r.fairway==="hit") fairPts++;
       if(r.green==="gir") greenPts++;
       if(r.green==="in2") greenPts+=2;
-      if(+r.putts===1) puttPts++;
-      if(+r.putts>=3) puttPts--;
+      if(+r.putts===1){puttPts++;one++}
+      if(+r.putts>=3){puttPts--;three++}
       lostPts-=(+r.lost||0);
     }
-    return {gross,s,f,total:s+f,fairPts,greenPts,puttPts,lostPts};
+    return {gross,s,f,total:s+f,fairPts,greenPts,puttPts,lostPts,one,three};
   }
   return {course,rr,rc,rt};
 }
@@ -351,10 +353,11 @@ function pastResults(){
         <div class="metric total"><span>Total</span><b>${t.total}</b></div>
       </div>
 
-      <div class="grid g4" style="margin-top:8px">
+      <div class="grid g5" style="margin-top:8px">
         <div class="metric"><span>Fairways</span><b>${t.fairPts}</b></div>
         <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
-        <div class="metric"><span>Putting</span><b>${t.puttPts}</b></div>
+        <div class="metric"><span>1 Putts</span><b>${t.one}</b></div>
+        <div class="metric"><span>3+ Putts</span><b>${t.three}</b></div>
         <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
       </div>
 
