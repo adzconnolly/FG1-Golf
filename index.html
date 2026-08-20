@@ -45,13 +45,54 @@ maidenheadYellow:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"Yell
 };
 function makeCourse(p){return p.holes.map(x=>({h:x[0],par:x[1],si:x[2]}))}
 let COURSE=makeCourse(PRESETS.demo);
-const fresh=()=>({view:"home",courseName:"FG1 Demo Golf Club",tee:"Demo",preset:"demo",players:[{name:"Player 1",hcp:18}],hole:1,pi:0,scores:{},started:false});
+const fresh=()=>({view:"home",courseName:"FG1 Demo Golf Club",tee:"Demo",preset:"demo",players:[{name:"Player 1",hcp:18}],hole:1,pi:0,scores:{},started:false,activeRoundId:null,rounds:[]});
 let S=fresh();
 try{const old=localStorage.getItem("fg1_v4"); if(old) S=JSON.parse(old)}catch(e){S=fresh()}
 if(!S.preset) S.preset="demo";
+if(!Array.isArray(S.rounds)) S.rounds=[];
+if(S.activeRoundId===undefined) S.activeRoundId=null;
 if(S.preset && PRESETS[S.preset]) COURSE=makeCourse(PRESETS[S.preset]);
 if(S.customCourse && Array.isArray(S.customCourse) && S.customCourse.length===18) COURSE=S.customCourse;
 const save=()=>{try{localStorage.setItem("fg1_v4",JSON.stringify(S))}catch(e){}};
+function roundSnapshot(status){
+  return {
+    id:S.activeRoundId||("r"+Date.now()),
+    status:status||"in_progress",
+    updatedAt:Date.now(),
+    courseName:S.courseName,
+    tee:S.tee||"",
+    preset:S.preset||"custom",
+    customCourse:S.customCourse||null,
+    players:JSON.parse(JSON.stringify(S.players||[])),
+    hole:S.hole||1,
+    pi:S.pi||0,
+    scores:JSON.parse(JSON.stringify(S.scores||{}))
+  };
+}
+function saveActiveRound(status){
+  if(!S.started && status!=="completed") return;
+  const snap=roundSnapshot(status||"in_progress");
+  S.activeRoundId=snap.id;
+  const idx=S.rounds.findIndex(r=>r.id===snap.id);
+  if(idx>=0) S.rounds[idx]=snap; else S.rounds.unshift(snap);
+  S.rounds.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  S.rounds=S.rounds.slice(0,20);
+}
+function loadRound(r){
+  S.activeRoundId=r.id;
+  S.started=r.status!=="completed";
+  S.courseName=r.courseName||"Imported Course";
+  S.tee=r.tee||"";
+  S.preset=r.preset||"custom";
+  S.customCourse=r.customCourse||null;
+  S.players=JSON.parse(JSON.stringify(r.players||[{name:"Player 1",hcp:18}]));
+  S.hole=r.hole||1; S.pi=r.pi||0;
+  S.scores=JSON.parse(JSON.stringify(r.scores||{}));
+  if(S.customCourse&&S.customCourse.length===18) COURSE=S.customCourse;
+  else if(PRESETS[S.preset]) COURSE=makeCourse(PRESETS[S.preset]);
+  S.view=r.status==="completed"?"results":"play";
+  save(); render();
+}
 const app=document.getElementById("app");
 const key=(pi,h)=>pi+"_"+h;
 function scoreRec(pi,h){
@@ -93,7 +134,26 @@ function render(){
   if(v==="reviewCourse") return reviewCourse();
   home();
 }
-function home(){app.innerHTML=`<div class="screen"><div class="hero"><div class="logo">FG<span>1</span></div><div>Fairways · Greens · 1 Putts</div><div class="tag">Every fairway.<br>Every green.<br>Every putt matters.</div><button class="btn primary full" onclick="FG.go('setup')">PLAY FG1</button></div><div class="card"><b>FG1 Total</b><div class="muted tiny">Stableford + performance points</div></div></div>`}
+function home(){
+  if(S.started) saveActiveRound("in_progress");
+  const recent=(S.rounds||[]).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,6);
+  const active=recent.find(r=>r.id===S.activeRoundId&&r.status==="in_progress");
+  app.innerHTML=`<div class="screen"><div class="hero"><div class="logo">FG<span>1</span></div><div>Fairways · Greens · 1 Putts</div><div class="tag">Every fairway.<br>Every green.<br>Every putt matters.</div>
+  ${active?`<button class="btn primary full" onclick="FG.resume('${active.id}')">RESUME ROUND · HOLE ${active.hole}</button><div style="height:8px"></div>`:""}
+  <button class="btn ${active?"outline":"primary"} full" onclick="FG.newRound()">PLAY NEW FG1 ROUND</button></div>
+  <div class="card"><b>Recent rounds</b><div class="muted tiny">Your last 6 rounds are stored on this device.</div></div>
+  ${recent.length?recent.map(r=>{
+    const label=r.status==="completed"?"Completed":"In progress";
+    const player=(r.players&&r.players[0])?r.players[0].name:"Player";
+    const date=new Date(r.updatedAt||Date.now()).toLocaleDateString();
+    let t={s:0,f:0,total:0};
+    try{
+      const oldCourse=COURSE, oldS=S;
+    }catch(e){}
+    return `<div class="card"><div class="row"><div><b>${r.courseName||"FG1 Round"}</b><div class="tiny muted">${date} · ${player} · ${label}${r.status==="in_progress"?` · Hole ${r.hole}`:""}</div></div><button class="btn outline" onclick="FG.resume('${r.id}')">${r.status==="completed"?"VIEW":"CONTINUE"}</button></div></div>`;
+  }).join(""):`<div class="card muted">No saved rounds yet.</div>`}
+  </div>`;
+}
 function setup(){app.innerHTML=top("Start a Round")+`<div class="screen">
 <div class="card">
 <label>Course</label>
@@ -120,6 +180,7 @@ function play(){
  const scoreOpts=par===3?[2,3,4,5,6]:par===4?[3,4,5,6,7,8]:[3,4,5,6,7,8];
  const done=r.gross!=null&&r.green&&r.putts!=null&&(par===3||r.fairway);
  app.innerHTML=top(`HOLE ${h} OF 18`,`PAR ${par} · SI ${c.hole.si} · ${c.sh} handicap stroke${c.sh===1?"":"s"}`)+`<div class="screen">
+ <div class="row" style="margin-bottom:12px"><button class="btn outline" onclick="FG.prevHole()" ${h===1?"disabled":""}>← PREVIOUS</button><span class="tiny muted">Hole ${h}</span><button class="btn outline" onclick="FG.nextHole()" ${h===18?"disabled":""}>NEXT →</button></div>
  <div class="tabs">${S.players.map((p,i)=>`<button class="btn ${i===pi?"active":""}" onclick="FG.pi(${i})">${p.name}</button>`).join("")}</div>
  <div class="label">Gross score</div><div class="grid g6">${scoreOpts.map(v=>`<button class="btn ${r.gross===v?"active":""}" onclick="FG.set('gross',${v})">${v}${v===8?"+":""}</button>`).join("")}</div>
  ${par===3?"":`<div class="label">Fairway</div><div class="grid g2"><button class="btn ${r.fairway==="hit"?"active":""}" onclick="FG.set('fairway','hit')">✓ HIT +1</button><button class="btn ${r.fairway==="miss"?"active":""}" onclick="FG.set('fairway','miss')">✕ MISS</button></div>`}
@@ -155,7 +216,24 @@ function reviewCourse(){
 }
 function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Lost balls: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
 window.FG={
- go(v){S.view=v;save();render()},
+ go(v){
+   if(S.started) saveActiveRound("in_progress");
+   S.view=v;save();render()
+ },
+ newRound(){
+   if(S.started) saveActiveRound("in_progress");
+   S.view="setup";save();render()
+ },
+ resume(id){
+   const r=(S.rounds||[]).find(x=>x.id===id);
+   if(r) loadRound(r)
+ },
+ prevHole(){
+   if(S.hole>1){saveActiveRound("in_progress");S.hole--;save();render()}
+ },
+ nextHole(){
+   if(S.hole<18){saveActiveRound("in_progress");S.hole++;save();render()}
+ },
  course(v){S.courseName=v;save()},
  preset(v){
    if(v==="custom"){S.preset="custom";save();render();return}
@@ -203,12 +281,23 @@ window.FG={
  },
  addP(){if(S.players.length<4){S.players.push({name:"Player "+(S.players.length+1),hcp:18});save();render()}},
  editP(i){const n=prompt("Player name",S.players[i].name);if(n===null)return;const h=prompt("Playing Handicap",S.players[i].hcp);if(h===null)return;S.players[i]={name:n||"Player",hcp:Math.max(0,+h||0)};save();render()},
- start(){S.hole=1;S.pi=0;S.scores={};S.started=true;S.view="play";save();render()},
- pi(i){S.pi=i;save();render()},
- set(f,v){scoreRec(S.pi,S.hole)[f]=v;save();render()},
- next(){if(S.pi<S.players.length-1)S.pi++;else if(S.hole<18){S.hole++;S.pi=0}else{S.view="results"}save();render()},
- jump(h){S.hole=h;S.view="play";save();render()},
- done(){S.started=false;S.view="home";save();render()}
+ start(){
+   if(S.started) saveActiveRound("in_progress");
+   S.activeRoundId="r"+Date.now();
+   S.hole=1;S.pi=0;S.scores={};S.started=true;S.view="play";
+   saveActiveRound("in_progress");save();render()
+ },
+ pi(i){S.pi=i;saveActiveRound("in_progress");save();render()},
+ set(f,v){scoreRec(S.pi,S.hole)[f]=v;saveActiveRound("in_progress");save();render()},
+ next(){
+   if(S.pi<S.players.length-1) S.pi++;
+   else if(S.hole<18){S.hole++;S.pi=0}
+   else{S.view="results";saveActiveRound("completed");S.started=false}
+   if(S.started) saveActiveRound("in_progress");
+   save();render()
+ },
+ jump(h){if(S.started)saveActiveRound("in_progress");S.hole=h;S.view="play";save();render()},
+ done(){S.started=false;S.activeRoundId=null;S.view="home";save();render()}
 };
 render();
 })();
