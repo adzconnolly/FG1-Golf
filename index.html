@@ -33,13 +33,24 @@ h2{margin:5px 0 15px}.bigTotal{font-size:56px;font-weight:900;color:var(--g);tex
 <script>
 (function(){
 "use strict";
-const COURSE=[
+const PRESETS={
+demo:{name:"FG1 Demo Golf Club",tee:"Demo",holes:[
 [1,4,7],[2,4,13],[3,3,17],[4,5,5],[5,4,1],[6,5,9],[7,4,11],[8,3,15],[9,4,3],
 [10,4,8],[11,4,14],[12,5,4],[13,3,18],[14,4,2],[15,5,10],[16,4,12],[17,3,16],[18,4,6]
-].map(x=>({h:x[0],par:x[1],si:x[2]}));
-const fresh=()=>({view:"home",courseName:"FG1 Golf Club",players:[{name:"Player 1",hcp:18}],hole:1,pi:0,scores:{},started:false});
+]},
+maidenheadYellow:{name:"The Maidenhead Golf Club – Mill Ride, Ascot",tee:"Yellow",holes:[
+[1,5,13],[2,4,1],[3,3,11],[4,4,5],[5,5,3],[6,4,15],[7,4,9],[8,3,17],[9,4,7],
+[10,5,6],[11,3,8],[12,4,12],[13,4,10],[14,4,2],[15,3,18],[16,4,16],[17,4,4],[18,5,14]
+]}
+};
+function makeCourse(p){return p.holes.map(x=>({h:x[0],par:x[1],si:x[2]}))}
+let COURSE=makeCourse(PRESETS.demo);
+const fresh=()=>({view:"home",courseName:"FG1 Demo Golf Club",tee:"Demo",preset:"demo",players:[{name:"Player 1",hcp:18}],hole:1,pi:0,scores:{},started:false});
 let S=fresh();
 try{const old=localStorage.getItem("fg1_v4"); if(old) S=JSON.parse(old)}catch(e){S=fresh()}
+if(!S.preset) S.preset="demo";
+if(S.preset && PRESETS[S.preset]) COURSE=makeCourse(PRESETS[S.preset]);
+if(S.customCourse && Array.isArray(S.customCourse) && S.customCourse.length===18) COURSE=S.customCourse;
 const save=()=>{try{localStorage.setItem("fg1_v4",JSON.stringify(S))}catch(e){}};
 const app=document.getElementById("app");
 const key=(pi,h)=>pi+"_"+h;
@@ -53,7 +64,21 @@ function strokes(hcp,si){hcp=Math.max(0,Number(hcp)||0);return Math.floor(hcp/18
 function stbf(gross,par,shots){if(gross==null)return 0; return Math.max(0,2-(gross-shots-par))}
 function fg(r,par){let p=0;if(par!==3&&r.fairway==="hit")p++;if(r.green==="gir")p++;if(par===5&&r.green==="in2")p+=2;if(+r.putts===1)p++;if(+r.putts>=3)p--;p-=(+r.lost||0);return p}
 function calc(pi,h){const hole=COURSE[h-1],r=scoreRec(pi,h),sh=strokes(S.players[pi].hcp,hole.si),s=stbf(r.gross,hole.par,sh),f=fg(r,hole.par);return{hole,r,sh,s,f,total:s+f}}
-function totals(pi,upto=18){let gross=0,s=0,f=0,played=0,fw=0,fwO=0,gir=0,one=0,three=0,lost=0;for(let h=1;h<=upto;h++){const c=calc(pi,h),r=c.r;if(r.gross!=null){gross+=+r.gross;s+=c.s;f+=c.f;played++}if(c.hole.par!==3&&r.fairway){fwO++;if(r.fairway==="hit")fw++}if(r.green==="gir"||r.green==="in2")gir++;if(+r.putts===1)one++;if(+r.putts>=3)three++;lost+=+r.lost||0}return{gross,s,f,total:s+f,played,fw,fwO,gir,one,three,lost}}
+function totals(pi,upto=18){
+let gross=0,s=0,f=0,played=0,fw=0,fwO=0,gir=0,one=0,three=0,lost=0;
+let fairPts=0,greenPts=0,puttPts=0,lostPts=0;
+for(let h=1;h<=upto;h++){
+ const c=calc(pi,h),r=c.r;
+ if(r.gross!=null){gross+=+r.gross;s+=c.s;f+=c.f;played++}
+ if(c.hole.par!==3&&r.fairway){fwO++;if(r.fairway==="hit"){fw++;fairPts++}}
+ if(r.green==="gir"){gir++;greenPts++}
+ if(r.green==="in2"){gir++;greenPts+=2}
+ if(+r.putts===1){one++;puttPts++}
+ if(+r.putts>=3){three++;puttPts--}
+ lost+=+r.lost||0; lostPts-=(+r.lost||0)
+}
+return{gross,s,f,total:s+f,played,fw,fwO,gir,one,three,lost,fairPts,greenPts,puttPts,lostPts}
+}
 function top(t,sub){return `<div class="top"><h1>${t}</h1>${sub?`<small>${sub}</small>`:""}</div>`}
 function nav(on){return `<div class="bottom"><button class="nav ${on==="score"?"on":""}" onclick="FG.go('play')"><b>⚑</b>Score</button><button class="nav ${on==="leader"?"on":""}" onclick="FG.go('leader')"><b>🏆</b>Leaderboard</button><button class="nav ${on==="card"?"on":""}" onclick="FG.go('card')"><b>▦</b>Scorecard</button><button class="nav" onclick="FG.go('home')"><b>•••</b>Home</button></div>`}
 function render(){
@@ -65,10 +90,29 @@ function render(){
   if(v==="leader") return leader();
   if(v==="card") return card();
   if(v==="results") return results();
+  if(v==="reviewCourse") return reviewCourse();
   home();
 }
 function home(){app.innerHTML=`<div class="screen"><div class="hero"><div class="logo">FG<span>1</span></div><div>Fairways · Greens · 1 Putts</div><div class="tag">Every fairway.<br>Every green.<br>Every putt matters.</div><button class="btn primary full" onclick="FG.go('setup')">PLAY FG1</button></div><div class="card"><b>FG1 Total</b><div class="muted tiny">Stableford + performance points</div></div></div>`}
-function setup(){app.innerHTML=top("Start a Round")+`<div class="screen"><div class="card"><label>Course</label><input value="${S.courseName}" oninput="FG.course(this.value)"><div class="label">Round</div><div class="notice">18-hole FG1 round. Playing Handicap is used to allocate Stableford strokes by Stroke Index.</div></div><button class="btn primary full" onclick="FG.go('players')">NEXT — PLAYERS</button></div>`}
+function setup(){app.innerHTML=top("Start a Round")+`<div class="screen">
+<div class="card">
+<label>Course</label>
+<select onchange="FG.preset(this.value)">
+<option value="demo" ${S.preset==="demo"?"selected":""}>FG1 Demo Golf Club</option>
+<option value="maidenheadYellow" ${S.preset==="maidenheadYellow"?"selected":""}>Maidenhead Golf Club – Mill Ride, Ascot (Yellow)</option>
+<option value="custom" ${S.preset==="custom"?"selected":""}>Imported / Custom Course</option>
+</select>
+<div class="tiny muted" style="margin-top:8px">${S.courseName}${S.tee?` · ${S.tee} tees`:""}</div>
+
+<div class="label">Import a scorecard</div>
+<input id="scorecardPhoto" type="file" accept="image/*" capture="environment" onchange="FG.readScorecard(this)" style="padding:10px">
+<div id="ocrStatus" class="tiny muted" style="margin-top:8px">Take a photo or choose a clear scorecard image. The app will try to read Par and Stroke Index and then show a review screen.</div>
+
+<div class="label">Round</div>
+<div class="notice">18-hole FG1 round. Playing Handicap is used to allocate Stableford strokes by Stroke Index.</div>
+</div>
+<button class="btn primary full" onclick="FG.go('players')">NEXT — PLAYERS</button>
+</div>`}
 function players(){app.innerHTML=top("Who's Playing?")+`<div class="screen">${S.players.map((p,i)=>`<div class="card row"><div><b>${p.name}</b><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><button class="btn outline" onclick="FG.editP(${i})">EDIT</button></div>`).join("")}${S.players.length<4?`<button class="btn outline full" onclick="FG.addP()">+ ADD PLAYER</button><br><br>`:""}<button class="btn primary full" onclick="FG.start()">START ROUND</button></div>`}
 function play(){
  if(!S.started){S.view="setup";save();return render()}
@@ -84,12 +128,79 @@ function play(){
  <div class="label">Lost balls</div><div class="grid g4">${[0,1,2,3].map(v=>`<button class="btn ${+r.lost===v?"active":""}" onclick="FG.set('lost',${v})">${v}${v===3?"+":""}${v?` (−${v})`:""}</button>`).join("")}</div>
  <div style="height:14px"></div><div class="grid g4"><div class="metric">Gross<b>${r.gross??"–"}</b></div><div class="metric">Stbf<b>${r.gross!=null?c.s:"–"}</b></div><div class="metric">FG1<b>${done?c.f:"–"}</b></div><div class="metric total">Total<b>${done?c.total:"–"}</b></div></div>
  <div style="height:14px"></div>${done?`<button class="btn primary full" onclick="FG.next()">${pi<S.players.length-1?"NEXT PLAYER →":h<18?"COMPLETE HOLE →":"FINISH ROUND"}</button>`:`<div class="notice">Complete the score, ${par===3?"":"fairway, "}green and putts.</div>`}</div>${nav("score")}`}
-function leader(){const a=S.players.map((p,i)=>({p,t:totals(i,S.hole)})).sort((x,y)=>y.t.total-x.t.total);app.innerHTML=top("FG1 LIVE",`Through hole ${S.hole}`)+`<div class="screen"><div class="card"><table><thead><tr><th>Pos</th><th class="name">Player</th><th>Stbf</th><th>FG1</th><th>Total</th></tr></thead><tbody>${a.map((x,i)=>`<tr><td>${i+1}</td><td class="name">${x.p.name}</td><td>${x.t.s}</td><td>${x.t.f}</td><td><b>${x.t.total}</b></td></tr>`).join("")}</tbody></table></div></div>${nav("leader")}`}
+function leader(){
+const a=S.players.map((p,i)=>({p,t:totals(i,S.hole)})).sort((x,y)=>y.t.total-x.t.total);
+app.innerHTML=top("FG1 LIVE",`Through hole ${S.hole}`)+`<div class="screen">
+${a.map((x,i)=>`<div class="card">
+<div class="row"><div><b>${i+1}. ${x.p.name}</b><div class="tiny muted">${x.t.s} Stableford + ${x.t.f} FG1</div></div><div style="font-size:30px;font-weight:900;color:var(--g)">${x.t.total}</div></div>
+<div class="grid g4" style="margin-top:12px">
+<div class="metric"><span>Fairways</span><b>${x.t.fairPts}</b></div>
+<div class="metric"><span>Greens</span><b>${x.t.greenPts}</b></div>
+<div class="metric"><span>Putting</span><b>${x.t.puttPts}</b></div>
+<div class="metric"><span>Lost</span><b>${x.t.lostPts}</b></div>
+</div>
+<div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · P ${x.t.puttPts} · Lost ${x.t.lostPts}</div>
+</div>`).join("")}
+</div>${nav("leader")}`}
 function card(){const pi=S.pi;app.innerHTML=top("Scorecard",S.players[pi].name)+`<div class="screen"><div class="card" style="overflow:auto"><table><thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>LB</th><th>FG1</th><th>Total</th></tr></thead><tbody>${COURSE.map(h=>{const c=calc(pi,h.h),r=c.r;return `<tr onclick="FG.jump(${h.h})"><td>${h.h}</td><td>${h.par}</td><td>${r.gross??"–"}</td><td>${r.gross!=null?c.s:"–"}</td><td>${h.par===3?"–":r.fairway==="hit"?"✓":r.fairway==="miss"?"×":"–"}</td><td>${r.green==="in2"?"★":r.green==="gir"?"✓":r.green==="miss"?"×":"–"}</td><td>${r.putts??"–"}</td><td>${+r.lost?`−${r.lost}`:"–"}</td><td>${r.gross!=null?c.f:"–"}</td><td><b>${r.gross!=null?c.total:"–"}</b></td></tr>`}).join("")}</tbody></table></div></div>${nav("card")}`}
+
+function reviewCourse(){
+ const rows=(S.pendingCourse||COURSE).map((h,i)=>`<tr><td>${i+1}</td><td><input type="number" min="3" max="5" value="${h.par}" onchange="FG.editImported(${i},'par',this.value)" style="padding:7px;text-align:center"></td><td><input type="number" min="1" max="18" value="${h.si}" onchange="FG.editImported(${i},'si',this.value)" style="padding:7px;text-align:center"></td></tr>`).join("");
+ app.innerHTML=top("Review Scorecard","Check Par and Stroke Index before applying")+`<div class="screen">
+ <div class="card"><label>Course name</label><input value="${S.pendingCourseName||"Imported Course"}" oninput="S.pendingCourseName=this.value;save()">
+ <div style="overflow:auto;margin-top:10px"><table><thead><tr><th>Hole</th><th>Par</th><th>SI</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+ <button class="btn primary full" onclick="FG.applyImported()">USE THIS COURSE</button><div style="height:8px"></div>
+ <button class="btn outline full" onclick="FG.go('setup')">CANCEL</button>
+ </div>`;
+}
 function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Lost balls: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
 window.FG={
  go(v){S.view=v;save();render()},
  course(v){S.courseName=v;save()},
+ preset(v){
+   if(v==="custom"){S.preset="custom";save();render();return}
+   const p=PRESETS[v]; if(!p)return;
+   S.preset=v; S.courseName=p.name; S.tee=p.tee; S.customCourse=null; COURSE=makeCourse(p); save(); render();
+ },
+ async readScorecard(input){
+   const file=input.files&&input.files[0]; if(!file)return;
+   const status=document.getElementById("ocrStatus"); if(status) status.textContent="Reading scorecard… this can take 20–60 seconds.";
+   try{
+     if(!window.Tesseract){
+       await new Promise((resolve,reject)=>{
+         const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+       });
+     }
+     const result=await Tesseract.recognize(file,"eng",{logger:m=>{if(status&&m.status)status.textContent=m.status+" "+(m.progress?Math.round(m.progress*100)+"%":"")}});
+     const text=result.data.text||"";
+     const parsed=FG.parseScorecard(text);
+     if(!parsed){ if(status)status.textContent="I couldn't reliably read 18 holes. Try a straighter, brighter photo, or use the review table after selecting a preset."; return; }
+     S.pendingCourse=parsed; S.pendingCourseName="Imported Scorecard"; S.view="reviewCourse"; save(); render();
+   }catch(e){ if(status)status.textContent="Scorecard reading failed on this image. Try another photo."; }
+ },
+ parseScorecard(text){
+   const nums=(text.match(/\b\d{1,3}\b/g)||[]).map(Number);
+   // Heuristic: find a run containing 18 par values (3–5) and 18 unique SI values (1–18).
+   // Works best on scorecards whose Par and SI rows are printed horizontally.
+   for(let i=0;i<nums.length;i++){
+     const pars=nums.slice(i,i+18);
+     if(pars.length===18&&pars.every(n=>n>=3&&n<=5)){
+       for(let j=i+18;j<Math.min(nums.length-17,i+90);j++){
+         const sis=nums.slice(j,j+18);
+         if(sis.length===18&&sis.every(n=>n>=1&&n<=18)&&new Set(sis).size>=15){
+           return pars.map((p,k)=>({h:k+1,par:p,si:sis[k]}));
+         }
+       }
+     }
+   }
+   return null;
+ },
+ editImported(i,f,v){if(!S.pendingCourse)return;S.pendingCourse[i][f]=+v;save()},
+ applyImported(){
+   if(!S.pendingCourse||S.pendingCourse.length!==18)return;
+   COURSE=S.pendingCourse.map((h,i)=>({h:i+1,par:+h.par,si:+h.si}));
+   S.customCourse=COURSE; S.courseName=S.pendingCourseName||"Imported Course"; S.tee="Imported"; S.preset="custom"; S.view="players"; save(); render();
+ },
  addP(){if(S.players.length<4){S.players.push({name:"Player "+(S.players.length+1),hcp:18});save();render()}},
  editP(i){const n=prompt("Player name",S.players[i].name);if(n===null)return;const h=prompt("Playing Handicap",S.players[i].hcp);if(h===null)return;S.players[i]={name:n||"Player",hcp:Math.max(0,+h||0)};save();render()},
  start(){S.hole=1;S.pi=0;S.scores={};S.started=true;S.view="play";save();render()},
