@@ -110,7 +110,7 @@ function saveActiveRound(status){
   const idx=S.rounds.findIndex(r=>r.id===snap.id);
   if(idx>=0) S.rounds[idx]=snap; else S.rounds.unshift(snap);
   S.rounds.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  S.rounds=S.rounds.slice(0,20);
+  S.rounds=S.rounds.slice(0,250);
 }
 function loadRound(r){
   S.activeRoundId=r.id;
@@ -201,6 +201,7 @@ function render(){
   if(v==="card") return card();
   if(v==="results") return results();
   if(v==="pastResults") return pastResults();
+  if(v==="myRounds") return myRounds();
   if(v==="reviewCourse") return reviewCourse();
   home();
   if(S.showRules){
@@ -216,8 +217,18 @@ function home(){
   <button class="btn ${active?"outline":"primary"} full" onclick="FG.newRound()">PLAY NEW FG1 ROUND</button>
 <div style="height:8px"></div>
 <button class="btn outline full rulesBtn" onclick="FG.showRules()">RULES</button></div>
-  <div class="card"><b>Recent rounds</b><div class="muted tiny">Your last 6 rounds are stored on this device.</div></div>
-  ${recent.length?recent.map(r=>{
+  <div class="card"><div class="row"><div><b>Recent rounds</b><div class="muted tiny">Latest 6 shown here. Full history is available in My Rounds.</div></div><button class="btn outline" onclick="FG.go('myRounds')">MY ROUNDS</button></div></div>
+  <div class="card">
+  <div class="row">
+    <div><b>Round backup</b><div class="tiny muted">Protect your history or move it to another device.</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:10px">
+    <button class="btn outline" onclick="FG.exportBackup()">EXPORT BACKUP</button>
+    <button class="btn outline" onclick="document.getElementById('backupImportHome').click()">IMPORT BACKUP</button>
+  </div>
+  <input id="backupImportHome" type="file" accept="application/json,.json" style="display:none" onchange="FG.importBackup(this)">
+</div>
+${recent.length?recent.map(r=>{
     const label=r.status==="completed"?"Completed":"In progress";
     const player=(r.players&&r.players[0])?r.players[0].name:"Player";
     const date=new Date(r.updatedAt||Date.now()).toLocaleDateString();
@@ -446,6 +457,49 @@ function extract18Holes(tee,detail){
   return first18;
 }
 
+
+function myRounds(){
+  if(S.started) saveActiveRound("in_progress");
+  const rounds=(S.rounds||[]).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+
+  const cards=rounds.length?rounds.map((r,idx)=>{
+    const label=r.status==="completed"?"Completed":"In progress";
+    const date=new Date(r.updatedAt||Date.now()).toLocaleDateString();
+    const names=(r.players||[]).map(p=>p.name).join(", ")||"Player";
+    const action=r.status==="completed"
+      ? `<button class="btn outline" onclick="FG.viewPastResults('${r.id}')">VIEW RESULTS</button>`
+      : `<button class="btn primary" onclick="FG.resume('${r.id}')">CONTINUE</button>`;
+
+    return `<div class="card">
+      <div class="row">
+        <div style="min-width:0">
+          <b>${r.courseName||"FG1 Round"}</b>
+          <div class="tiny muted">${date} · ${r.tee||"Tee not recorded"} · ${label}${r.status==="in_progress"?` · Hole ${r.hole||1}`:""}</div>
+          <div class="tiny muted" style="margin-top:3px">${names}</div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:10px">
+        ${action}
+        <button class="btn danger" onclick="FG.deleteRoundFromArchive('${r.id}')">DELETE</button>
+      </div>
+    </div>`;
+  }).join(""):`<div class="card center muted">No saved rounds yet.</div>`;
+
+  app.innerHTML=top("My Rounds",`${rounds.length} saved round${rounds.length===1?"":"s"}`)+`<div class="screen">
+    <div class="card">
+      <b>Long-term history</b>
+      <div class="tiny muted" style="margin-top:4px">FG1 keeps up to 250 rounds on this device with no automatic expiry. Browser/site data can still be cleared, so use Backup for important history.</div>
+      <div class="grid g2" style="margin-top:12px">
+        <button class="btn primary" onclick="FG.exportBackup()">EXPORT BACKUP</button>
+        <button class="btn outline" onclick="document.getElementById('backupImportArchive').click()">IMPORT BACKUP</button>
+      </div>
+      <input id="backupImportArchive" type="file" accept="application/json,.json" style="display:none" onchange="FG.importBackup(this)">
+    </div>
+    ${cards}
+    <button class="btn outline full" onclick="FG.go('home')">BACK TO HOME</button>
+  </div>`;
+}
+
 function savedRoundContext(round){
   const course=(round.customCourse&&round.customCourse.length===18)
     ? round.customCourse
@@ -557,6 +611,60 @@ window.FG={
  },
  closeRules(e){
    if(e && e.target && e.target.classList.contains("modalBack")) FG.hideRules();
+ },
+ exportBackup(){
+   if(S.started) saveActiveRound("in_progress");
+   save();
+   const payload={
+     app:"FG1",
+     backupVersion:1,
+     exportedAt:new Date().toISOString(),
+     rounds:S.rounds||[]
+   };
+   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement("a");
+   const d=new Date();
+   const stamp=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+   a.href=url;
+   a.download="FG1-Rounds-Backup-"+stamp+".json";
+   document.body.appendChild(a);
+   a.click();
+   a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+ },
+ async importBackup(input){
+   const file=input.files&&input.files[0];
+   if(!file) return;
+   try{
+     const text=await file.text();
+     const payload=JSON.parse(text);
+     if(!payload||payload.app!=="FG1"||!Array.isArray(payload.rounds)) throw new Error("Invalid FG1 backup");
+
+     const existing=new Map((S.rounds||[]).map(r=>[r.id,r]));
+     for(const r of payload.rounds){
+       if(!r||!r.id) continue;
+       const old=existing.get(r.id);
+       if(!old||(r.updatedAt||0)>(old.updatedAt||0)) existing.set(r.id,r);
+     }
+     S.rounds=[...existing.values()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,250);
+     save();
+     alert("FG1 backup imported. "+payload.rounds.length+" round"+(payload.rounds.length===1?"":"s")+" found in the backup.");
+     render();
+   }catch(e){
+     alert("That file could not be imported as an FG1 backup.");
+   }finally{
+     input.value="";
+   }
+ },
+ deleteRoundFromArchive(id){
+   const r=(S.rounds||[]).find(x=>x.id===id);
+   if(!r) return;
+   if(confirm("Delete "+(r.courseName||"this round")+"? This cannot be undone.")){
+     S.rounds=S.rounds.filter(x=>x.id!==id);
+     if(S.activeRoundId===id){S.activeRoundId=null;S.started=false;}
+     save();render();
+   }
  },
  resume(id){
    const r=(S.rounds||[]).find(x=>x.id===id);
