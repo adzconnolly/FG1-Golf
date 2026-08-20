@@ -109,6 +109,15 @@ const app=document.getElementById("app");
 function scrollTopNow(){
   try{window.scrollTo({top:0,left:0,behavior:"smooth"})}catch(e){window.scrollTo(0,0)}
 }
+function scrollActionIntoView(){
+  setTimeout(()=>{
+    const btn=document.getElementById("holeActionBtn");
+    if(btn){
+      try{btn.scrollIntoView({behavior:"smooth",block:"center"})}
+      catch(e){btn.scrollIntoView()}
+    }
+  },120);
+}
 const key=(pi,h)=>pi+"_"+h;
 function scoreRec(pi,h){
   if(!S.scores[key(pi,h)]) S.scores[key(pi,h)]={gross:null,fairway:null,green:null,putts:null,lost:0};
@@ -207,10 +216,10 @@ function play(){
  <div class="label">Gross score</div><div class="grid g6">${scoreOpts.map(v=>`<button class="btn ${r.gross===v?"active":""}" onclick="FG.set('gross',${v})">${v}${v===8?"+":""}</button>`).join("")}</div>
  ${par===3?"":`<div class="label">Fairway</div><div class="grid g2"><button class="btn ${r.fairway==="hit"?"active":""}" onclick="FG.set('fairway','hit')">✓ HIT +1</button><button class="btn ${r.fairway==="miss"?"active":""}" onclick="FG.set('fairway','miss')">✕ MISS</button></div>`}
  <div class="label">Green</div>${par===5?`<div class="grid g3"><button class="btn ${r.green==="in2"?"active":""}" onclick="FG.set('green','in2')">★ IN 2 +2</button><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`:`<div class="grid g2"><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`}
- <div class="label">Putts</div><div class="grid g4">${[1,2,3,4].map(v=>`<button class="btn ${+r.putts===v?"active":""}" onclick="FG.set('putts',${v})">${v}${v===4?"+":""}</button>`).join("")}</div>
+ <div class="label">Putts</div><div class="grid g4">${[1,2,3,4].map(v=>`<button class="btn ${+r.putts===v?"active":""}" onclick="FG.setPutts(${v})">${v}${v===4?"+":""}</button>`).join("")}</div>
  <div class="label">Lost balls</div><div class="grid g4">${[0,1,2,3].map(v=>`<button class="btn ${+r.lost===v?"active":""}" onclick="FG.set('lost',${v})">${v}${v===3?"+":""}${v?` (−${v})`:""}</button>`).join("")}</div>
  <div style="height:14px"></div><div class="grid g4"><div class="metric">Gross<b>${r.gross??"–"}</b></div><div class="metric">Stbf<b>${r.gross!=null?c.s:"–"}</b></div><div class="metric">FG1<b>${done?c.f:"–"}</b></div><div class="metric total">Total<b>${done?c.total:"–"}</b></div></div>
- <div style="height:14px"></div>${done?`<button class="btn primary full" onclick="FG.next()">${pi<S.players.length-1?"NEXT PLAYER →":h<18?"COMPLETE HOLE →":"FINISH ROUND"}</button>`:`<div class="notice">Complete the score, ${par===3?"":"fairway, "}green and putts.</div>`}</div>${nav("score")}`}
+ <div style="height:14px"></div>${done?`<button id="holeActionBtn" class="btn primary full" onclick="FG.next()">${pi<S.players.length-1?"NEXT PLAYER →":h<18?"COMPLETE HOLE →":"FINISH ROUND"}</button>`:`<div class="notice">Complete the score, ${par===3?"":"fairway, "}green and putts.</div>`}</div>${nav("score")}`}
 function leader(){
 const a=S.players.map((p,i)=>({p,t:totals(i,S.hole)})).sort((x,y)=>y.t.total-x.t.total);
 app.innerHTML=top("FG1 LIVE",`Through hole ${S.hole}`)+`<div class="screen">
@@ -492,6 +501,13 @@ window.FG={
  },
  pi(i){S.pi=i;saveActiveRound("in_progress");save();render();setTimeout(scrollTopNow,0)},
  set(f,v){scoreRec(S.pi,S.hole)[f]=v;saveActiveRound("in_progress");save();render()},
+ setPutts(v){
+   scoreRec(S.pi,S.hole).putts=v;
+   saveActiveRound("in_progress");
+   save();
+   render();
+   scrollActionIntoView();
+ },
  next(){
    if(S.pi<S.players.length-1) S.pi++;
    else if(S.hole<18){S.hole++;S.pi=0}
