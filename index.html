@@ -37,6 +37,18 @@ h2{margin:5px 0 15px}.bigTotal{font-size:56px;font-weight:900;color:var(--g);tex
 .rulesList{margin:16px 0 0;padding-left:20px}
 .rulesList li{margin:8px 0;line-height:1.35}
 
+
+.courseSearchBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.searchRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.searchResults{margin-top:10px;display:grid;gap:8px}
+.searchResult{background:#f7faf7;border:1px solid var(--line);border-radius:13px;padding:12px;text-align:left;width:100%}
+.searchResult b{display:block;font-size:15px}
+.searchResult small{display:block;color:var(--muted);margin-top:3px}
+.teeChoice{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#f7faf7;border:1px solid var(--line);border-radius:13px;padding:11px;margin-top:8px}
+.courseStatus{margin-top:9px;font-size:13px;color:var(--muted);line-height:1.35}
+.courseStatus.error{color:#a83232}
+.courseStatus.good{color:var(--g);font-weight:700}
+
 </style>
 </head>
 <body><div id="app"></div>
@@ -218,32 +230,44 @@ function home(){
   </div>`;
   if(S.showRules) document.body.insertAdjacentHTML("beforeend",rulesModal());
 }
-function setup(){app.innerHTML=top("Start a Round")+`<div class="screen">
-<div class="card">
-<label>Course</label>
-<select onchange="FG.preset(this.value)">
-<option value="demo" ${S.preset==="demo"?"selected":""}>FG1 Demo Golf Club</option>
-<optgroup label="Maidenhead Golf Club – Mill Ride, Ascot">
-<option value="maidenheadWhite" ${S.preset==="maidenheadWhite"?"selected":""}>⚪ White Tees · Men · Par 72</option>
-<option value="maidenheadYellow" ${S.preset==="maidenheadYellow"?"selected":""}>🟡 Yellow Tees · Men · Par 72</option>
-<option value="maidenheadBlue" ${S.preset==="maidenheadBlue"?"selected":""}>🔵 Blue Tees · Men · Par 72</option>
-<option value="maidenheadRed" ${S.preset==="maidenheadRed"?"selected":""}>🔴 Red Tees · Women · Par 73</option>
-</optgroup>
-<option value="custom" ${S.preset==="custom"?"selected":""}>Imported / Custom Course</option>
-</select>
-<div class="tiny muted" style="margin-top:8px">${S.courseName}${S.tee?` · ${S.tee} tees`:""}</div>
-${S.preset&&S.preset.startsWith("maidenhead")?`<div class="notice" style="margin-top:10px">Par and Stroke Index are loaded from the Maidenhead Golf Club scorecard for the selected tee set. White, Yellow and Blue use the Men's Par/S.I.; Red uses the Women's Par/S.I.</div>`:""}
+function setup(){
+ app.innerHTML=top("Start a Round")+`<div class="screen">
+ <div class="card">
+   <label>Course</label>
+   <select id="coursePresetSelect" onchange="FG.preset(this.value)">
+     <option value="demo" ${S.preset==="demo"?"selected":""}>FG1 Demo Golf Club</option>
+     <optgroup label="Maidenhead Golf Club – Mill Ride, Ascot">
+       <option value="maidenheadWhite" ${S.preset==="maidenheadWhite"?"selected":""}>⚪ White Tees · Men · Par 72</option>
+       <option value="maidenheadYellow" ${S.preset==="maidenheadYellow"?"selected":""}>🟡 Yellow Tees · Men · Par 72</option>
+       <option value="maidenheadBlue" ${S.preset==="maidenheadBlue"?"selected":""}>🔵 Blue Tees · Men · Par 72</option>
+       <option value="maidenheadRed" ${S.preset==="maidenheadRed"?"selected":""}>🔴 Red Tees · Women · Par 73</option>
+     </optgroup>
+     <option value="custom" ${S.preset==="custom"?"selected":""}>Imported / Custom Course</option>
+   </select>
+   <div class="tiny muted" style="margin-top:8px">${S.courseName}${S.tee?` · ${S.tee} tees`:""}</div>
+   ${S.preset&&S.preset.startsWith("maidenhead")?`<div class="notice" style="margin-top:10px">Par and Stroke Index are loaded from the Maidenhead Golf Club scorecard for the selected tee set. White, Yellow and Blue use the Men's Par/S.I.; Red uses the Women's Par/S.I.</div>`:""}
 
-<div class="label">Import a scorecard</div>
-<input id="scorecardPhoto" type="file" accept="image/*" capture="environment" onchange="FG.readScorecard(this)" style="padding:10px">
-<div id="ocrStatus" class="tiny muted" style="margin-top:8px">Take a photo or choose a clear scorecard image. The app will try to read Par and Stroke Index and then show a review screen.</div>
+   <div class="courseSearchBox">
+     <label>Find another course</label>
+     <div class="searchRow">
+       <input id="courseSearchInput" type="search" placeholder="e.g. Wentworth, Sunningdale..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();FG.searchCourses()}">
+       <button class="btn primary" onclick="FG.searchCourses()">SEARCH</button>
+     </div>
+     <div class="courseStatus" id="courseSearchStatus">Search by club or course name. Select a result, then choose the tee you want to play.</div>
+     <div id="courseSearchResults" class="searchResults"></div>
+     <div id="courseTeeResults"></div>
+   </div>
 
-<div class="label">Round</div>
-<div class="notice">18-hole FG1 round. Playing Handicap is used to allocate Stableford strokes by Stroke Index.</div>
-</div>
-<button class="btn primary full" onclick="FG.go('players')">NEXT — PLAYERS</button>
-</div>`}
-function players(){app.innerHTML=top("Who's Playing?")+`<div class="screen">${S.players.map((p,i)=>`<div class="card row"><div><b>${p.name}</b><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn outline" onclick="FG.editP(${i})">EDIT</button>${S.players.length>1?`<button class="btn danger" onclick="FG.removeP(${i})">REMOVE</button>`:""}</div></div>`).join("")}${S.players.length<4?`<button class="btn outline full" onclick="FG.addP()">+ ADD PLAYER</button><br><br>`:""}<button class="btn primary full" onclick="FG.start()">START ROUND</button></div>`}
+   <div class="label">Import a scorecard</div>
+   <input id="scorecardPhoto" type="file" accept="image/*" capture="environment" onchange="FG.readScorecard(this)" style="padding:10px">
+   <div id="ocrStatus" class="tiny muted" style="margin-top:8px">Or take a photo / choose a clear scorecard image. FG1 will try to read Par and Stroke Index and let you review it.</div>
+
+   <div class="label">Round</div>
+   <div class="notice">18-hole FG1 round. Playing Handicap is used to allocate Stableford strokes by Stroke Index.</div>
+ </div>
+ <button class="btn primary full" onclick="FG.go('players')">NEXT — PLAYERS</button>
+ </div>`;
+}function players(){app.innerHTML=top("Who's Playing?")+`<div class="screen">${S.players.map((p,i)=>`<div class="card row"><div><b>${p.name}</b><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn outline" onclick="FG.editP(${i})">EDIT</button>${S.players.length>1?`<button class="btn danger" onclick="FG.removeP(${i})">REMOVE</button>`:""}</div></div>`).join("")}${S.players.length<4?`<button class="btn outline full" onclick="FG.addP()">+ ADD PLAYER</button><br><br>`:""}<button class="btn primary full" onclick="FG.start()">START ROUND</button></div>`}
 function play(){
  if(!S.started){S.view="setup";save();return render()}
  const h=S.hole,pi=S.pi,c=calc(pi,h),r=c.r,par=c.hole.par;
@@ -321,6 +345,105 @@ function card(){
     </div>`;
   }).join("");
   app.innerHTML=top("Scorecards","All players")+`<div class="screen">${playerCards}</div>${nav("card")}`;
+}
+
+
+const COURSE_API="https://api.opengolfapi.org/v1";
+
+function apiArray(obj){
+  if(Array.isArray(obj)) return obj;
+  if(!obj||typeof obj!=="object") return [];
+  for(const k of ["data","courses","results","items"]){
+    if(Array.isArray(obj[k])) return obj[k];
+    if(obj[k]&&Array.isArray(obj[k].data)) return obj[k].data;
+  }
+  return [];
+}
+function firstVal(obj,keys,fallback=""){
+  if(!obj) return fallback;
+  for(const k of keys){
+    if(obj[k]!==undefined&&obj[k]!==null&&obj[k]!=="") return obj[k];
+  }
+  return fallback;
+}
+function normalizeCourseResult(x){
+  return {
+    id:firstVal(x,["id","course_id","courseId","public_id","publicId"]),
+    name:firstVal(x,["name","course_name","courseName","club_name","clubName"],"Golf Course"),
+    city:firstVal(x,["city","locality","town"]),
+    state:firstVal(x,["state","state_name","county","region"]),
+    country:firstVal(x,["country","country_name","countryCode"]),
+    raw:x
+  };
+}
+function teeLabel(t){
+  const name=firstVal(t,["name","tee_name","teeName","color","colour"],"Tee");
+  const gender=firstVal(t,["gender","sex"],"");
+  const rating=firstVal(t,["course_rating","courseRating","rating"],"");
+  const slope=firstVal(t,["slope_rating","slopeRating","slope"],"");
+  const par=firstVal(t,["par","total_par","totalPar"],"");
+  return [name,gender?`· ${gender}`:"",par?`· Par ${par}`:"",rating?`· CR ${rating}`:"",slope?`· Slope ${slope}`:""].filter(Boolean).join(" ");
+}
+function extractTeeSets(detail,teesPayload,holesPayload){
+  let candidates=[];
+  const roots=[detail,detail&&detail.data,detail&&detail.course,detail&&detail.scorecard,detail&&detail.data&&detail.data.scorecard,teesPayload,teesPayload&&teesPayload.data].filter(Boolean);
+  for(const root of roots){
+    for(const k of ["tee_sets","teeSets","tees","scorecard","tee_boxes","teeBoxes"]){
+      if(Array.isArray(root[k])) candidates.push(...root[k]);
+    }
+  }
+
+  // Some APIs return hole rows containing tee-specific values.
+  if(!candidates.length&&holesPayload){
+    const holes=apiArray(holesPayload);
+    if(holes.length===18){
+      const sample=holes[0]||{};
+      const possible=firstVal(sample,["tees","tee_sets","teeSets"],[]);
+      if(Array.isArray(possible)){
+        const names=[...new Set(possible.map(t=>firstVal(t,["name","tee_name","color","colour"],"Tee")))];
+        for(const n of names){
+          candidates.push({name:n,holes:holes.map(h=>{
+            const tt=(firstVal(h,["tees","tee_sets","teeSets"],[])||[]).find(x=>firstVal(x,["name","tee_name","color","colour"],"Tee")===n)||{};
+            return {
+              hole_number:firstVal(h,["hole_number","holeNumber","number","hole"]),
+              par:firstVal(tt,["par"],firstVal(h,["par"])),
+              stroke_index:firstVal(tt,["stroke_index","strokeIndex","handicap","hcp"],firstVal(h,["stroke_index","strokeIndex","handicap","hcp"])),
+              yardage:firstVal(tt,["yardage","yards","distance"])
+            };
+          })});
+        }
+      }
+    }
+  }
+
+  // Deduplicate tee choices.
+  const seen=new Set();
+  return candidates.filter(t=>{
+    const key=JSON.stringify([firstVal(t,["id","tee_id","teeId"]),firstVal(t,["name","tee_name","teeName","color","colour"]),firstVal(t,["gender","sex"])]);
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+function extract18Holes(tee,detail){
+  let holes=firstVal(tee,["holes","scorecard","hole_data","holeData"],[]);
+  if(!Array.isArray(holes)||holes.length<18){
+    const root=detail&&detail.data?detail.data:detail;
+    const all=root?firstVal(root,["holes","hole_data","holeData"],[]):[];
+    if(Array.isArray(all)&&all.length>=18) holes=all;
+  }
+  if(!Array.isArray(holes)) return null;
+
+  const normalized=holes.map((h,i)=>{
+    let par=Number(firstVal(h,["par","hole_par","holePar"]));
+    let si=Number(firstVal(h,["stroke_index","strokeIndex","handicap","hcp","index","si"]));
+    return {h:Number(firstVal(h,["hole_number","holeNumber","number","hole"],i+1)),par,si};
+  }).filter(h=>h.h>=1&&h.h<=18);
+
+  normalized.sort((a,b)=>a.h-b.h);
+  if(normalized.length<18) return null;
+  const first18=normalized.slice(0,18);
+  if(!first18.every(h=>h.par>=3&&h.par<=6&&h.si>=1&&h.si<=18)) return null;
+  return first18;
 }
 
 function savedRoundContext(round){
@@ -472,6 +595,90 @@ window.FG={
    if(v==="custom"){S.preset="custom";save();render();return}
    const p=PRESETS[v]; if(!p)return;
    S.preset=v; S.courseName=p.name; S.tee=p.tee; S.customCourse=null; COURSE=makeCourse(p); save(); render();
+ },
+ async searchCourses(){
+   const input=document.getElementById("courseSearchInput");
+   const status=document.getElementById("courseSearchStatus");
+   const results=document.getElementById("courseSearchResults");
+   const tees=document.getElementById("courseTeeResults");
+   const q=(input?input.value:"").trim();
+   if(q.length<2){if(status){status.className="courseStatus error";status.textContent="Enter at least 2 characters."}return}
+   if(status){status.className="courseStatus";status.textContent="Searching courses…"}
+   if(results) results.innerHTML="";
+   if(tees) tees.innerHTML="";
+   try{
+     const r=await fetch(COURSE_API+"/courses/search?q="+encodeURIComponent(q)+"&limit=12");
+     if(!r.ok) throw new Error("Search service returned "+r.status);
+     const json=await r.json();
+     const found=apiArray(json).map(normalizeCourseResult).filter(c=>c.id);
+     S.courseSearchCache=found;
+     save();
+     if(!found.length){status.className="courseStatus error";status.textContent="No matching courses found. Try a shorter course or club name.";return}
+     status.className="courseStatus good";
+     status.textContent=found.length+" course"+(found.length===1?"":"s")+" found. Choose one:";
+     results.innerHTML=found.map((c,i)=>`<button class="searchResult" onclick="FG.chooseCourseResult(${i})"><b>${c.name}</b><small>${[c.city,c.state,c.country].filter(Boolean).join(" · ")}</small></button>`).join("");
+   }catch(e){
+     status.className="courseStatus error";
+     status.textContent="Course search is unavailable right now. Check your internet connection, or use Maidenhead / scorecard import.";
+   }
+ },
+ async chooseCourseResult(i){
+   const c=(S.courseSearchCache||[])[i];
+   if(!c) return;
+   const status=document.getElementById("courseSearchStatus");
+   const results=document.getElementById("courseSearchResults");
+   const teeBox=document.getElementById("courseTeeResults");
+   if(status){status.className="courseStatus";status.textContent="Loading "+c.name+" tee sets…"}
+   if(results) results.innerHTML="";
+   if(teeBox) teeBox.innerHTML="";
+   try{
+     const [detailR,teeR,holeR]=await Promise.all([
+       fetch(COURSE_API+"/courses/"+encodeURIComponent(c.id)),
+       fetch(COURSE_API+"/courses/"+encodeURIComponent(c.id)+"/tees").catch(()=>null),
+       fetch(COURSE_API+"/courses/"+encodeURIComponent(c.id)+"/holes").catch(()=>null)
+     ]);
+     if(!detailR.ok) throw new Error("Course detail unavailable");
+     const detail=await detailR.json();
+     let teePayload=null,holePayload=null;
+     if(teeR&&teeR.ok) teePayload=await teeR.json();
+     if(holeR&&holeR.ok) holePayload=await holeR.json();
+
+     const teeSets=extractTeeSets(detail,teePayload,holePayload);
+     if(!teeSets.length) throw new Error("No tees");
+     S.selectedOnlineCourse={course:c,detail,teeSets};
+     save();
+
+     status.className="courseStatus good";
+     status.textContent="Choose your tee:";
+     teeBox.innerHTML=`<div class="card" style="margin-top:10px"><b>${c.name}</b><div class="tiny muted">Select a tee with complete 18-hole Par and Stroke Index data.</div>
+       ${teeSets.map((t,idx)=>`<div class="teeChoice"><div><b>${teeLabel(t)}</b></div><button class="btn outline" onclick="FG.useOnlineTee(${idx})">USE TEE</button></div>`).join("")}
+     </div>`;
+   }catch(e){
+     status.className="courseStatus error";
+     status.textContent="This course was found, but complete tee / Stroke Index data could not be loaded. Try another course or use scorecard photo import.";
+   }
+ },
+ useOnlineTee(idx){
+   const pack=S.selectedOnlineCourse;
+   if(!pack||!pack.teeSets||!pack.teeSets[idx]) return;
+   const tee=pack.teeSets[idx];
+   const holes=extract18Holes(tee,pack.detail);
+   const status=document.getElementById("courseSearchStatus");
+   if(!holes){
+     if(status){status.className="courseStatus error";status.textContent="That tee does not contain a complete 18-hole Par and Stroke Index scorecard. Please choose another tee or import a scorecard photo."}
+     return;
+   }
+   COURSE=holes;
+   S.customCourse=holes;
+   S.courseName=pack.course.name;
+   S.tee=firstVal(tee,["name","tee_name","teeName","color","colour"],"Selected");
+   S.preset="custom";
+   save();
+   if(status){status.className="courseStatus good";status.textContent=S.courseName+" · "+S.tee+" tees selected. Par and Stroke Index are ready for the round."}
+   const select=document.getElementById("coursePresetSelect");
+   if(select) select.value="custom";
+   const teeBox=document.getElementById("courseTeeResults");
+   if(teeBox) teeBox.innerHTML=`<div class="notice" style="margin-top:10px"><b>Selected:</b> ${S.courseName} · ${S.tee} tees. All 18 holes include Par and Stroke Index.</div>`;
  },
  async readScorecard(input){
    const file=input.files&&input.files[0]; if(!file)return;
