@@ -146,6 +146,7 @@ function render(){
   if(v==="leader") return leader();
   if(v==="card") return card();
   if(v==="results") return results();
+  if(v==="pastResults") return pastResults();
   if(v==="reviewCourse") return reviewCourse();
   home();
 }
@@ -165,7 +166,7 @@ function home(){
     try{
       const oldCourse=COURSE, oldS=S;
     }catch(e){}
-    return `<div class="card"><div class="row"><div style="min-width:0"><b>${r.courseName||"FG1 Round"}</b><div class="tiny muted">${date} · ${player} · ${label}${r.status==="in_progress"?` · Hole ${r.hole}`:""}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn outline" onclick="FG.resume('${r.id}')">${r.status==="completed"?"VIEW":"CONTINUE"}</button><button class="btn danger" onclick="FG.deleteRound('${r.id}')">DELETE</button></div></div></div>`;
+    return `<div class="card"><div class="row"><div style="min-width:0"><b>${r.courseName||"FG1 Round"}</b><div class="tiny muted">${date} · ${player} · ${label}${r.status==="in_progress"?` · Hole ${r.hole}`:""}</div></div><div style="display:flex;gap:6px;flex-shrink:0">${r.status==="completed"?`<button class="btn outline" onclick="FG.viewPastResults('${r.id}')">VIEW RESULTS</button>`:`<button class="btn outline" onclick="FG.resume('${r.id}')">CONTINUE</button>`}<button class="btn danger" onclick="FG.deleteRound('${r.id}')">DELETE</button></div></div></div>`;
   }).join(""):`<div class="card muted">No saved rounds yet.</div>`}
   </div>`;
 }
@@ -271,6 +272,95 @@ function card(){
   }).join("");
   app.innerHTML=top("Scorecards","All players")+`<div class="screen">${playerCards}</div>${nav("card")}`;
 }
+
+function savedRoundContext(round){
+  const course=(round.customCourse&&round.customCourse.length===18)
+    ? round.customCourse
+    : (PRESETS[round.preset]?makeCourse(PRESETS[round.preset]):COURSE);
+
+  function rr(pi,h){
+    const r=((round.scores||{})[pi+"_"+h])||{gross:null,fairway:null,green:null,putts:null,lost:0};
+    if(r.lost==null) r.lost=0;
+    return r;
+  }
+  function rc(pi,h){
+    const hole=course[h-1],r=rr(pi,h);
+    const player=(round.players||[])[pi]||{hcp:0};
+    const sh=strokes(player.hcp,hole.si);
+    const s=stbf(r.gross,hole.par,sh),f=fg(r,hole.par);
+    return {hole,r,sh,s,f,total:s+f};
+  }
+  function rt(pi){
+    let gross=0,s=0,f=0,fairPts=0,greenPts=0,puttPts=0,lostPts=0;
+    for(let h=1;h<=18;h++){
+      const c=rc(pi,h),r=c.r;
+      if(r.gross!=null){gross+=+r.gross;s+=c.s;f+=c.f}
+      if(c.hole.par!==3&&r.fairway==="hit") fairPts++;
+      if(r.green==="gir") greenPts++;
+      if(r.green==="in2") greenPts+=2;
+      if(+r.putts===1) puttPts++;
+      if(+r.putts>=3) puttPts--;
+      lostPts-=(+r.lost||0);
+    }
+    return {gross,s,f,total:s+f,fairPts,greenPts,puttPts,lostPts};
+  }
+  return {course,rr,rc,rt};
+}
+
+function pastResults(){
+  const round=(S.rounds||[]).find(r=>r.id===S.pastRoundId);
+  if(!round){S.view="home";save();return render()}
+  const ctx=savedRoundContext(round);
+
+  const cards=(round.players||[]).map((p,pi)=>{
+    const t=ctx.rt(pi);
+    const rows=ctx.course.map(h=>{
+      const c=ctx.rc(pi,h.h),r=c.r;
+      const fairPts=(h.par!==3&&r.fairway==="hit")?1:0;
+      const greenPts=r.green==="in2"?2:(r.green==="gir"?1:0);
+      const puttPts=(+r.putts===1)?1:((+r.putts>=3)?-1:0);
+      const lostPts=-(+r.lost||0);
+      return `<tr>
+        <td>${h.h}</td><td>${h.par}</td><td>${r.gross??"–"}</td><td>${r.gross!=null?c.s:"–"}</td>
+        <td>${fairPts||"–"}</td><td>${greenPts||"–"}</td><td>${puttPts||"–"}</td><td>${lostPts||"–"}</td>
+        <td>${r.gross!=null?c.f:"–"}</td><td><b>${r.gross!=null?c.total:"–"}</b></td>
+      </tr>`;
+    }).join("");
+
+    return `<div class="card">
+      <div class="row">
+        <div><h2 style="margin:0">${p.name} (${p.hcp})</h2><div class="tiny muted">Playing Handicap ${p.hcp}</div></div>
+        <div style="font-size:28px;font-weight:900;color:var(--g)">${t.total}</div>
+      </div>
+
+      <div class="grid g4" style="margin-top:12px">
+        <div class="metric"><span>Gross</span><b>${t.gross}</b></div>
+        <div class="metric"><span>Stbf</span><b>${t.s}</b></div>
+        <div class="metric"><span>FG1</span><b>${t.f}</b></div>
+        <div class="metric total"><span>Total</span><b>${t.total}</b></div>
+      </div>
+
+      <div class="grid g4" style="margin-top:8px">
+        <div class="metric"><span>Fairways</span><b>${t.fairPts}</b></div>
+        <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
+        <div class="metric"><span>Putting</span><b>${t.puttPts}</b></div>
+        <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
+      </div>
+
+      <div style="overflow:auto;margin-top:10px">
+        <table>
+          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Lost</th><th>FG1</th><th>Total</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join("");
+
+  const date=new Date(round.updatedAt||Date.now()).toLocaleDateString();
+  app.innerHTML=top("Round Results",`${round.courseName||"FG1 Round"} · ${date}`)+
+    `<div class="screen">${cards}<button class="btn outline full" onclick="FG.go('home')">BACK TO HOME</button></div>`;
+}
+
 function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Lost balls: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
 window.FG={
  go(v){
@@ -284,6 +374,13 @@ window.FG={
  resume(id){
    const r=(S.rounds||[]).find(x=>x.id===id);
    if(r) loadRound(r)
+ },
+ viewPastResults(id){
+   const r=(S.rounds||[]).find(x=>x.id===id);
+   if(!r) return;
+   S.pastRoundId=id;
+   S.view="pastResults";
+   save();render();setTimeout(scrollTopNow,0);
  },
  deleteRound(id){
    const r=(S.rounds||[]).find(x=>x.id===id);
