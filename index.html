@@ -94,6 +94,9 @@ function loadRound(r){
   save(); render();
 }
 const app=document.getElementById("app");
+function scrollTopNow(){
+  try{window.scrollTo({top:0,left:0,behavior:"smooth"})}catch(e){window.scrollTo(0,0)}
+}
 const key=(pi,h)=>pi+"_"+h;
 function scoreRec(pi,h){
   if(!S.scores[key(pi,h)]) S.scores[key(pi,h)]={gross:null,fairway:null,green:null,putts:null,lost:0};
@@ -150,7 +153,7 @@ function home(){
     try{
       const oldCourse=COURSE, oldS=S;
     }catch(e){}
-    return `<div class="card"><div class="row"><div><b>${r.courseName||"FG1 Round"}</b><div class="tiny muted">${date} · ${player} · ${label}${r.status==="in_progress"?` · Hole ${r.hole}`:""}</div></div><button class="btn outline" onclick="FG.resume('${r.id}')">${r.status==="completed"?"VIEW":"CONTINUE"}</button></div></div>`;
+    return `<div class="card"><div class="row"><div style="min-width:0"><b>${r.courseName||"FG1 Round"}</b><div class="tiny muted">${date} · ${player} · ${label}${r.status==="in_progress"?` · Hole ${r.hole}`:""}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn outline" onclick="FG.resume('${r.id}')">${r.status==="completed"?"VIEW":"CONTINUE"}</button><button class="btn danger" onclick="FG.deleteRound('${r.id}')">DELETE</button></div></div></div>`;
   }).join(""):`<div class="card muted">No saved rounds yet.</div>`}
   </div>`;
 }
@@ -181,7 +184,7 @@ function play(){
  const done=r.gross!=null&&r.green&&r.putts!=null&&(par===3||r.fairway);
  app.innerHTML=top(`HOLE ${h} OF 18`,`PAR ${par} · SI ${c.hole.si} · ${c.sh} handicap stroke${c.sh===1?"":"s"}`)+`<div class="screen">
  <div class="row" style="margin-bottom:12px"><button class="btn outline" onclick="FG.prevHole()" ${h===1?"disabled":""}>← PREVIOUS</button><span class="tiny muted">Hole ${h}</span><button class="btn outline" onclick="FG.nextHole()" ${h===18?"disabled":""}>NEXT →</button></div>
- <div class="tabs">${S.players.map((p,i)=>`<button class="btn ${i===pi?"active":""}" onclick="FG.pi(${i})">${p.name}</button>`).join("")}</div>
+ <div class="tabs">${S.players.map((p,i)=>`<button class="btn ${i===pi?"active":""}" onclick="FG.pi(${i})">${p.name} (${p.hcp})</button>`).join("")}</div>
  <div class="label">Gross score</div><div class="grid g6">${scoreOpts.map(v=>`<button class="btn ${r.gross===v?"active":""}" onclick="FG.set('gross',${v})">${v}${v===8?"+":""}</button>`).join("")}</div>
  ${par===3?"":`<div class="label">Fairway</div><div class="grid g2"><button class="btn ${r.fairway==="hit"?"active":""}" onclick="FG.set('fairway','hit')">✓ HIT +1</button><button class="btn ${r.fairway==="miss"?"active":""}" onclick="FG.set('fairway','miss')">✕ MISS</button></div>`}
  <div class="label">Green</div>${par===5?`<div class="grid g3"><button class="btn ${r.green==="in2"?"active":""}" onclick="FG.set('green','in2')">★ IN 2 +2</button><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`:`<div class="grid g2"><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`}
@@ -203,16 +206,52 @@ ${a.map((x,i)=>`<div class="card">
 <div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · P ${x.t.puttPts} · Lost ${x.t.lostPts}</div>
 </div>`).join("")}
 </div>${nav("leader")}`}
-function card(){const pi=S.pi;app.innerHTML=top("Scorecard",S.players[pi].name)+`<div class="screen"><div class="card" style="overflow:auto"><table><thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>LB</th><th>FG1</th><th>Total</th></tr></thead><tbody>${COURSE.map(h=>{const c=calc(pi,h.h),r=c.r;return `<tr onclick="FG.jump(${h.h})"><td>${h.h}</td><td>${h.par}</td><td>${r.gross??"–"}</td><td>${r.gross!=null?c.s:"–"}</td><td>${h.par===3?"–":r.fairway==="hit"?"✓":r.fairway==="miss"?"×":"–"}</td><td>${r.green==="in2"?"★":r.green==="gir"?"✓":r.green==="miss"?"×":"–"}</td><td>${r.putts??"–"}</td><td>${+r.lost?`−${r.lost}`:"–"}</td><td>${r.gross!=null?c.f:"–"}</td><td><b>${r.gross!=null?c.total:"–"}</b></td></tr>`}).join("")}</tbody></table></div></div>${nav("card")}`}
-
-function reviewCourse(){
- const rows=(S.pendingCourse||COURSE).map((h,i)=>`<tr><td>${i+1}</td><td><input type="number" min="3" max="5" value="${h.par}" onchange="FG.editImported(${i},'par',this.value)" style="padding:7px;text-align:center"></td><td><input type="number" min="1" max="18" value="${h.si}" onchange="FG.editImported(${i},'si',this.value)" style="padding:7px;text-align:center"></td></tr>`).join("");
- app.innerHTML=top("Review Scorecard","Check Par and Stroke Index before applying")+`<div class="screen">
- <div class="card"><label>Course name</label><input value="${S.pendingCourseName||"Imported Course"}" oninput="S.pendingCourseName=this.value;save()">
- <div style="overflow:auto;margin-top:10px"><table><thead><tr><th>Hole</th><th>Par</th><th>SI</th></tr></thead><tbody>${rows}</tbody></table></div></div>
- <button class="btn primary full" onclick="FG.applyImported()">USE THIS COURSE</button><div style="height:8px"></div>
- <button class="btn outline full" onclick="FG.go('setup')">CANCEL</button>
- </div>`;
+function card(){
+  const playerCards=S.players.map((p,pi)=>{
+    const t=totals(pi,18);
+    const rows=COURSE.map(h=>{
+      const c=calc(pi,h.h),r=c.r;
+      const fairPts=(h.par!==3&&r.fairway==="hit")?1:0;
+      const greenPts=r.green==="in2"?2:(r.green==="gir"?1:0);
+      const puttPts=(+r.putts===1)?1:((+r.putts>=3)?-1:0);
+      const lostPts=-(+r.lost||0);
+      return `<tr onclick="FG.jumpPlayer(${pi},${h.h})">
+        <td>${h.h}</td>
+        <td>${h.par}</td>
+        <td>${r.gross??"–"}</td>
+        <td>${r.gross!=null?c.s:"–"}</td>
+        <td>${fairPts||"–"}</td>
+        <td>${greenPts||"–"}</td>
+        <td>${puttPts||"–"}</td>
+        <td>${lostPts||"–"}</td>
+        <td>${r.gross!=null?c.f:"–"}</td>
+        <td><b>${r.gross!=null?c.total:"–"}</b></td>
+      </tr>`;
+    }).join("");
+    return `<div class="card">
+      <div class="row"><div><h2 style="margin:0">${p.name} (${p.hcp})</h2><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><div style="font-size:28px;font-weight:900;color:var(--g)">${t.total}</div></div>
+      <div class="grid g4" style="margin-top:12px">
+        <div class="metric"><span>Stbf</span><b>${t.s}</b></div>
+        <div class="metric"><span>FG1</span><b>${t.f}</b></div>
+        <div class="metric"><span>Gross</span><b>${t.gross||"–"}</b></div>
+        <div class="metric total"><span>Total</span><b>${t.total}</b></div>
+      </div>
+      <div class="grid g4" style="margin-top:8px">
+        <div class="metric"><span>Fairways</span><b>${t.fairPts}</b></div>
+        <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
+        <div class="metric"><span>Putting</span><b>${t.puttPts}</b></div>
+        <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
+      </div>
+      <div class="tiny muted" style="margin:10px 0">Tap any hole to edit that player’s score.</div>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Lost</th><th>FG1</th><th>Total</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join("");
+  app.innerHTML=top("Scorecards","All players")+`<div class="screen">${playerCards}</div>${nav("card")}`;
 }
 function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Lost balls: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
 window.FG={
@@ -228,11 +267,26 @@ window.FG={
    const r=(S.rounds||[]).find(x=>x.id===id);
    if(r) loadRound(r)
  },
+ deleteRound(id){
+   const r=(S.rounds||[]).find(x=>x.id===id);
+   if(!r) return;
+   const label=r.courseName||"this round";
+   if(confirm("Delete "+label+"? This cannot be undone.")){
+     S.rounds=S.rounds.filter(x=>x.id!==id);
+     if(S.activeRoundId===id){S.activeRoundId=null;S.started=false;}
+     save();render();
+   }
+ },
+ jumpPlayer(pi,h){
+   if(S.started) saveActiveRound("in_progress");
+   S.pi=pi;S.hole=h;S.view="play";
+   save();render();setTimeout(scrollTopNow,0)
+ },
  prevHole(){
-   if(S.hole>1){saveActiveRound("in_progress");S.hole--;save();render()}
+   if(S.hole>1){saveActiveRound("in_progress");S.hole--;save();render();setTimeout(scrollTopNow,0)}
  },
  nextHole(){
-   if(S.hole<18){saveActiveRound("in_progress");S.hole++;save();render()}
+   if(S.hole<18){saveActiveRound("in_progress");S.hole++;save();render();setTimeout(scrollTopNow,0)}
  },
  course(v){S.courseName=v;save()},
  preset(v){
@@ -287,16 +341,16 @@ window.FG={
    S.hole=1;S.pi=0;S.scores={};S.started=true;S.view="play";
    saveActiveRound("in_progress");save();render()
  },
- pi(i){S.pi=i;saveActiveRound("in_progress");save();render()},
+ pi(i){S.pi=i;saveActiveRound("in_progress");save();render();setTimeout(scrollTopNow,0)},
  set(f,v){scoreRec(S.pi,S.hole)[f]=v;saveActiveRound("in_progress");save();render()},
  next(){
    if(S.pi<S.players.length-1) S.pi++;
    else if(S.hole<18){S.hole++;S.pi=0}
    else{S.view="results";saveActiveRound("completed");S.started=false}
    if(S.started) saveActiveRound("in_progress");
-   save();render()
+   save();render();setTimeout(scrollTopNow,0)
  },
- jump(h){if(S.started)saveActiveRound("in_progress");S.hole=h;S.view="play";save();render()},
+ jump(h){if(S.started)saveActiveRound("in_progress");S.hole=h;S.view="play";save();render();setTimeout(scrollTopNow,0)},
  done(){S.started=false;S.activeRoundId=null;S.view="home";save();render()}
 };
 render();
