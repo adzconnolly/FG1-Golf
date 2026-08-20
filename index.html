@@ -176,7 +176,7 @@ function setup(){app.innerHTML=top("Start a Round")+`<div class="screen">
 </div>
 <button class="btn primary full" onclick="FG.go('players')">NEXT — PLAYERS</button>
 </div>`}
-function players(){app.innerHTML=top("Who's Playing?")+`<div class="screen">${S.players.map((p,i)=>`<div class="card row"><div><b>${p.name}</b><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><button class="btn outline" onclick="FG.editP(${i})">EDIT</button></div>`).join("")}${S.players.length<4?`<button class="btn outline full" onclick="FG.addP()">+ ADD PLAYER</button><br><br>`:""}<button class="btn primary full" onclick="FG.start()">START ROUND</button></div>`}
+function players(){app.innerHTML=top("Who's Playing?")+`<div class="screen">${S.players.map((p,i)=>`<div class="card row"><div><b>${p.name}</b><div class="tiny muted">Playing Handicap ${p.hcp}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn outline" onclick="FG.editP(${i})">EDIT</button>${S.players.length>1?`<button class="btn danger" onclick="FG.removeP(${i})">REMOVE</button>`:""}</div></div>`).join("")}${S.players.length<4?`<button class="btn outline full" onclick="FG.addP()">+ ADD PLAYER</button><br><br>`:""}<button class="btn primary full" onclick="FG.start()">START ROUND</button></div>`}
 function play(){
  if(!S.started){S.view="setup";save();return render()}
  const h=S.hole,pi=S.pi,c=calc(pi,h),r=c.r,par=c.hole.par;
@@ -334,6 +334,15 @@ window.FG={
    S.customCourse=COURSE; S.courseName=S.pendingCourseName||"Imported Course"; S.tee="Imported"; S.preset="custom"; S.view="players"; save(); render();
  },
  addP(){if(S.players.length<4){S.players.push({name:"Player "+(S.players.length+1),hcp:18});save();render()}},
+ removeP(i){
+   if(S.players.length<=1) return;
+   const name=S.players[i]?.name||"this player";
+   if(confirm("Remove "+name+" from this round?")){
+     S.players.splice(i,1);
+     if(S.pi>=S.players.length) S.pi=S.players.length-1;
+     save();render();
+   }
+ },
  editP(i){const n=prompt("Player name",S.players[i].name);if(n===null)return;const h=prompt("Playing Handicap",S.players[i].hcp);if(h===null)return;S.players[i]={name:n||"Player",hcp:Math.max(0,+h||0)};save();render()},
  start(){
    if(S.started) saveActiveRound("in_progress");
