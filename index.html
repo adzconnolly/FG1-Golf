@@ -219,7 +219,7 @@ function play(){
  ${par===3?"":`<div class="label">Fairway</div><div class="grid g2"><button class="btn ${r.fairway==="hit"?"active":""}" onclick="FG.set('fairway','hit')">✓ HIT +1</button><button class="btn ${r.fairway==="miss"?"active":""}" onclick="FG.set('fairway','miss')">✕ MISS</button></div>`}
  <div class="label">Green</div>${par===5?`<div class="grid g3"><button class="btn ${r.green==="in2"?"active":""}" onclick="FG.set('green','in2')">★ IN 2 +2</button><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`:`<div class="grid g2"><button class="btn ${r.green==="gir"?"active":""}" onclick="FG.set('green','gir')">✓ GIR +1</button><button class="btn ${r.green==="miss"?"active":""}" onclick="FG.set('green','miss')">✕ MISS</button></div>`}
  <div class="label">Putts</div><div class="grid g4">${[1,2,3,4].map(v=>`<button class="btn ${+r.putts===v?"active":""}" onclick="FG.setPutts(${v})">${v}${v===4?"+":""}</button>`).join("")}</div>
- <div class="label">Lost balls</div><div class="grid g4">${[0,1,2,3].map(v=>`<button class="btn ${+r.lost===v?"active":""}" onclick="FG.set('lost',${v})">${v}${v===3?"+":""}${v?` (−${v})`:""}</button>`).join("")}</div>
+ <div class="label">Penalties</div><div class="grid g4">${[0,1,2,3].map(v=>`<button class="btn ${+r.lost===v?"active":""}" onclick="FG.set('lost',${v})">${v}${v===3?"+":""}${v?` (−${v})`:""}</button>`).join("")}</div>
  <div style="height:14px"></div><div class="grid g4"><div class="metric">Gross<b>${r.gross??"–"}</b></div><div class="metric">Stbf<b>${r.gross!=null?c.s:"–"}</b></div><div class="metric">FG1<b>${done?c.f:"–"}</b></div><div class="metric total">Total<b>${done?c.total:"–"}</b></div></div>
  <div style="height:14px"></div>${done?`<button id="holeActionBtn" class="btn primary full" onclick="FG.next()">${pi<S.players.length-1?"NEXT PLAYER →":h<18?"COMPLETE HOLE →":"FINISH ROUND"}</button>`:`<div class="notice">Complete the score, ${par===3?"":"fairway, "}green and putts.</div>`}</div>${nav("score")}`}
 function leader(){
@@ -232,9 +232,9 @@ ${a.map((x,i)=>`<div class="card">
 <div class="metric"><span>Greens</span><b>${x.t.greenPts}</b></div>
 <div class="metric"><span>1 Putts</span><b>${x.t.one}</b></div>
 <div class="metric"><span>3+ Putts</span><b>${x.t.three}</b></div>
-<div class="metric"><span>Lost</span><b>${x.t.lostPts}</b></div>
+<div class="metric"><span>Penalty</span><b>${x.t.lostPts}</b></div>
 </div>
-<div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · 1P ${x.t.one} · 3+P ${x.t.three} · Lost ${x.t.lostPts}</div>
+<div class="tiny muted" style="margin-top:8px">FG1 breakdown: F ${x.t.fairPts} · G ${x.t.greenPts} · 1P ${x.t.one} · 3+P ${x.t.three} · Penalty ${x.t.lostPts}</div>
 </div>`).join("")}
 </div>${nav("leader")}`}
 function card(){
@@ -272,12 +272,12 @@ function card(){
         <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
         <div class="metric"><span>1 Putts</span><b>${t.one}</b></div>
         <div class="metric"><span>3+ Putts</span><b>${t.three}</b></div>
-        <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
+        <div class="metric"><span>Penalty</span><b>${t.lostPts}</b></div>
       </div>
       <div class="tiny muted" style="margin:10px 0">Tap any hole to edit that player’s score.</div>
       <div style="overflow:auto">
         <table>
-          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Lost</th><th>FG1</th><th>Total</th></tr></thead>
+          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Penalty</th><th>FG1</th><th>Total</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -358,12 +358,12 @@ function pastResults(){
         <div class="metric"><span>Greens</span><b>${t.greenPts}</b></div>
         <div class="metric"><span>1 Putts</span><b>${t.one}</b></div>
         <div class="metric"><span>3+ Putts</span><b>${t.three}</b></div>
-        <div class="metric"><span>Lost</span><b>${t.lostPts}</b></div>
+        <div class="metric"><span>Penalty</span><b>${t.lostPts}</b></div>
       </div>
 
       <div style="overflow:auto;margin-top:10px">
         <table>
-          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Lost</th><th>FG1</th><th>Total</th></tr></thead>
+          <thead><tr><th>H</th><th>Par</th><th>Gross</th><th>Stbf</th><th>F</th><th>G</th><th>P</th><th>Penalty</th><th>FG1</th><th>Total</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -375,7 +375,7 @@ function pastResults(){
     `<div class="screen">${cards}<button class="btn outline full" onclick="FG.go('home')">BACK TO HOME</button></div>`;
 }
 
-function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Lost balls: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
+function results(){app.innerHTML=top("ROUND COMPLETE",S.courseName)+`<div class="screen">${S.players.map((p,i)=>{const t=totals(i);return `<div class="card"><h2>${p.name}</h2><div class="grid g4"><div class="metric">Gross<b>${t.gross}</b></div><div class="metric">Stbf<b>${t.s}</b></div><div class="metric">FG1<b>${t.f}</b></div><div class="metric total">Total<b>${t.total}</b></div></div><p class="muted tiny">Penalties: ${t.lost} · Fairways: ${t.fw}/${t.fwO} · GIR: ${t.gir}/18</p></div>`}).join("")}<button class="btn outline full" onclick="FG.done()">DONE</button></div>`}
 window.FG={
  go(v){
    if(S.started) saveActiveRound("in_progress");
